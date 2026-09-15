@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Baños Públicos</title>
+    <meta name="description" content="Encuentra y comparte lavabos públicos cerca de ti" />
+    <meta name="theme-color" content="#0d9488" />
+
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icons/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Baños Públicos" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="cabecera">
+      <h1>🚻 Baños Públicos</h1>
+    </header>
+
+    <div id="map"></div>
+
+    <p id="aviso-modo-añadir" class="aviso-flotante" hidden>
+      Toca el mapa en el lugar donde está el baño
+    </p>
+
+    <button id="btn-añadir" class="fab" type="button" title="Añadir baño">+</button>
+
+    <div id="hoja-formulario" class="hoja" hidden>
+      <form id="form-lavabo">
+        <h2>Añadir baño público</h2>
+
+        <label>
+          Nombre / lugar
+          <input
+            type="text"
+            name="nombre"
+            placeholder="Ej: Bar Manolo, Centro comercial..."
+            maxlength="80"
+            required
+          />
+        </label>
+
+        <label>
+          Instrucciones para acceder
+          <textarea
+            name="descripcion"
+            placeholder="Ej: Entra por la puerta lateral y pregunta al camarero por la llave"
+            maxlength="300"
+            rows="3"
+          ></textarea>
+        </label>
+
+        <button type="button" id="btn-usar-ubicacion" class="btn-secundario">
+          📍 Usar mi ubicación actual
+        </button>
+
+        <div class="hoja-acciones">
+          <button type="button" id="btn-cancelar-form" class="btn-secundario">Cancelar</button>
+          <button type="submit" class="btn-primario">Guardar</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>

@@ -16,6 +16,12 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="css/style.css" />
+
+    <script
+      async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7951552027568533"
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body>
     <header class="cabecera">
@@ -27,6 +33,8 @@
         rel="noopener"
       >☕ Invítame a un café</a>
     </header>
+
+    <div id="espacio-anuncio" class="espacio-anuncio" hidden></div>
 
     <div id="map"></div>
 
@@ -107,6 +115,17 @@
     </div>
 
     <div id="toast" class="toast"></div>
+
+    <div id="aviso-cookies" class="aviso-cookies" hidden>
+      <p>
+        Usamos cookies para mostrar anuncios y mantener la app gratis. Puedes leer más en
+        nuestra <a href="privacidad.html" target="_blank" rel="noopener">política de privacidad</a>.
+      </p>
+      <div class="aviso-cookies-botones">
+        <button type="button" id="btn-rechazar-cookies" class="btn-secundario">Rechazar</button>
+        <button type="button" id="btn-aceptar-cookies" class="btn-primario">Aceptar</button>
+      </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script type="module" src="js/app.js"></script>

@@ -574,9 +574,8 @@ const espacioAnuncio = document.getElementById("espacio-anuncio");
 function cargarAnuncio() {
   if (!AD_SENSE_CLIENTE) return;
   espacioAnuncio.hidden = false;
-  // TODO: insertar aquí el <ins class="adsbygoogle"> con el bloque de anuncio
-  // y cargar https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js
-  // (recuerda añadir ese dominio a la Content-Security-Policy en Render).
+  document.body.classList.add("con-anuncio");
+  // TODO: insertar aquí el <ins class="adsbygoogle"> con el bloque de anuncio.
 }
 
 if (AD_SENSE_CLIENTE) {

@@ -5,6 +5,7 @@
   --color-texto: #1f2937;
   --color-fondo: #f8fafc;
   --sombra: 0 2px 10px rgba(0, 0, 0, 0.15);
+  --altura-anuncio: 50px;
 }
 
 * {
@@ -68,8 +69,12 @@ body {
 }
 
 .espacio-anuncio {
-  flex: 0 0 auto;
-  min-height: 50px;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--altura-anuncio) + env(safe-area-inset-bottom, 0));
+  padding-bottom: env(safe-area-inset-bottom, 0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -77,6 +82,7 @@ body {
   color: #9ca3af;
   font-size: 0.75rem;
   overflow: hidden;
+  z-index: 950;
 }
 
 .aviso-cookies {
@@ -388,6 +394,20 @@ body {
 .fab.activo {
   background: var(--color-peligro);
   transform: rotate(45deg);
+}
+
+/* Cuando hay un anuncio real visible (ver body.con-anuncio en app.js), se sube
+   el botón "+" y el aviso de cookies para que no queden tapados por la barra. */
+body.con-anuncio .fab {
+  bottom: calc(env(safe-area-inset-bottom, 0) + var(--altura-anuncio) + 1.25rem);
+}
+
+body.con-anuncio .aviso-cookies {
+  bottom: calc(var(--altura-anuncio) + 0.75rem);
+}
+
+body.con-anuncio .leaflet-bottom {
+  bottom: var(--altura-anuncio);
 }
 
 /* Hoja de formulario (bottom sheet) */

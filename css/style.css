@@ -158,14 +158,69 @@ body {
   overflow-wrap: anywhere;
 }
 
-.btn-borrar-comentario {
+.comentario-acciones-propias {
+  display: flex;
   flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.btn-borrar-comentario,
+.btn-editar-comentario {
   border: none;
   background: none;
-  color: var(--color-peligro);
   font-size: 0.78rem;
   padding: 0;
   cursor: pointer;
+}
+
+.btn-borrar-comentario {
+  color: var(--color-peligro);
+}
+
+.btn-editar-comentario {
+  color: var(--color-primario);
+}
+
+.comentario-editando {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  margin: 0 0 0.5rem;
+}
+
+.input-editar-comentario {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 0.4rem;
+}
+
+.editar-comentario-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.editar-comentario-acciones button {
+  border: none;
+  border-radius: 6px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-guardar-comentario {
+  background: var(--color-primario);
+  color: white;
+}
+
+.btn-cancelar-comentario {
+  background: #e5e7eb;
+  color: var(--color-texto);
 }
 
 .sin-comentarios {

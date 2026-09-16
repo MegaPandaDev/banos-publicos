@@ -9,6 +9,7 @@ import {
   collection,
   addDoc,
   setDoc,
+  updateDoc,
   deleteDoc,
   onSnapshot,
   query,
@@ -261,34 +262,94 @@ async function enviarValoracion(id, estrellas) {
   }
 }
 
+let ultimosComentarios = [];
+let comentarioEditandoId = null;
+
 function cargarComentarios(id) {
   if (unsubComentarios) unsubComentarios();
+  comentarioEditandoId = null;
   const ref = query(collection(db, COLECCION, id, "comentarios"), orderBy("creadoEn", "desc"));
   unsubComentarios = onSnapshot(
     ref,
     (snap) => {
-      if (snap.empty) {
-        listaComentarios.innerHTML = `<p class="sin-comentarios">Todavía no hay comentarios.</p>`;
-        return;
-      }
-      listaComentarios.innerHTML = snap.docs
-        .map((d) => {
-          const c = d.data();
-          const esPropio = c.creadoPor === uidActual;
-          return `
-            <div class="comentario">
-              <p>${escaparHTML(c.texto)}</p>
-              ${esPropio ? `<button type="button" class="btn-borrar-comentario" data-id="${d.id}">Eliminar</button>` : ""}
-            </div>
-          `;
-        })
-        .join("");
-      listaComentarios.querySelectorAll(".btn-borrar-comentario").forEach((btn) => {
-        btn.addEventListener("click", () => borrarComentario(id, btn.dataset.id));
-      });
+      ultimosComentarios = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderizarComentarios(id);
     },
     (err) => console.error(err)
   );
+}
+
+function renderizarComentarios(id) {
+  if (ultimosComentarios.length === 0) {
+    listaComentarios.innerHTML = `<p class="sin-comentarios">Todavía no hay comentarios.</p>`;
+    return;
+  }
+
+  listaComentarios.innerHTML = ultimosComentarios
+    .map((c) => {
+      if (c.id === comentarioEditandoId) {
+        return `
+          <div class="comentario-editando">
+            <textarea class="input-editar-comentario" maxlength="400" rows="2">${escaparHTML(c.texto)}</textarea>
+            <div class="editar-comentario-acciones">
+              <button type="button" class="btn-cancelar-comentario" data-id="${c.id}">Cancelar</button>
+              <button type="button" class="btn-guardar-comentario" data-id="${c.id}">Guardar</button>
+            </div>
+          </div>
+        `;
+      }
+      const esPropio = c.creadoPor === uidActual;
+      return `
+        <div class="comentario">
+          <p>${escaparHTML(c.texto)}</p>
+          ${
+            esPropio
+              ? `<div class="comentario-acciones-propias">
+                   <button type="button" class="btn-editar-comentario" data-id="${c.id}">Editar</button>
+                   <button type="button" class="btn-borrar-comentario" data-id="${c.id}">Eliminar</button>
+                 </div>`
+              : ""
+          }
+        </div>
+      `;
+    })
+    .join("");
+
+  listaComentarios.querySelectorAll(".btn-borrar-comentario").forEach((btn) => {
+    btn.addEventListener("click", () => borrarComentario(id, btn.dataset.id));
+  });
+  listaComentarios.querySelectorAll(".btn-editar-comentario").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      comentarioEditandoId = btn.dataset.id;
+      renderizarComentarios(id);
+    });
+  });
+  listaComentarios.querySelectorAll(".btn-cancelar-comentario").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      comentarioEditandoId = null;
+      renderizarComentarios(id);
+    });
+  });
+  listaComentarios.querySelectorAll(".btn-guardar-comentario").forEach((btn) => {
+    btn.addEventListener("click", (e) => guardarEdicionComentario(id, btn.dataset.id, e.currentTarget));
+  });
+}
+
+async function guardarEdicionComentario(idBano, idComentario, btnGuardar) {
+  const contenedor = btnGuardar.closest(".comentario-editando");
+  const nuevoTexto = contenedor.querySelector("textarea").value.trim();
+  if (!nuevoTexto) return;
+
+  btnGuardar.disabled = true;
+  try {
+    await updateDoc(doc(db, COLECCION, idBano, "comentarios", idComentario), { texto: nuevoTexto });
+    comentarioEditandoId = null;
+    renderizarComentarios(idBano);
+  } catch (err) {
+    console.error(err);
+    mostrarToast("No se pudo editar el comentario.", "error");
+    btnGuardar.disabled = false;
+  }
 }
 
 async function borrarComentario(idBano, idComentario) {

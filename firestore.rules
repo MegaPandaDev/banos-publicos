@@ -40,7 +40,7 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // Comentarios anónimos: se pueden crear y borrar (solo el autor puede borrar el suyo), nunca editar.
+      // Comentarios anónimos: solo el autor puede editar (solo el texto) o borrar el suyo.
       match /comentarios/{comentarioId} {
         allow read: if true;
         allow create: if request.auth != null
@@ -48,7 +48,12 @@ service cloud.firestore {
                       && request.resource.data.texto is string
                       && request.resource.data.texto.size() > 0
                       && request.resource.data.texto.size() <= 400;
-        allow update: if false;
+        allow update: if request.auth != null
+                      && request.auth.uid == resource.data.creadoPor
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['texto'])
+                      && request.resource.data.texto is string
+                      && request.resource.data.texto.size() > 0
+                      && request.resource.data.texto.size() <= 400;
         allow delete: if request.auth != null && request.auth.uid == resource.data.creadoPor;
       }
     }

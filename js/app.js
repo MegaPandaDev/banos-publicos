@@ -58,12 +58,12 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 L.control.zoom({ position: "bottomright" }).addTo(map);
 
-const iconoLavabo = L.divIcon({
+const iconoLavabo = L.icon({
   className: "marcador-lavabo",
-  html: "🚽",
-  iconSize: [36, 36],
-  iconAnchor: [18, 30],
-  popupAnchor: [0, -28],
+  iconUrl: "icons/marcador-wc.svg",
+  iconSize: [30, 30],
+  iconAnchor: [15, 28],
+  popupAnchor: [0, -26],
 });
 
 function centrarEnMiUbicacion() {

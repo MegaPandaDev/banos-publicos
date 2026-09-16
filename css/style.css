@@ -46,6 +46,12 @@ body {
   font-weight: 600;
 }
 
+.marca-autor {
+  font-size: 0.7rem;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
 .enlace-kofi {
   color: white;
   background: rgba(255, 255, 255, 0.18);

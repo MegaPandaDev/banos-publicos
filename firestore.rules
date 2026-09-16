@@ -27,6 +27,30 @@ service cloud.firestore {
 
       // Nadie borra documentos desde el cliente.
       allow delete: if false;
+
+      // Una valoración (1-5 estrellas) por usuario anónimo y baño.
+      // El id del documento es el uid, así cada persona solo puede tener/editar la suya.
+      match /valoraciones/{uid} {
+        allow read: if true;
+        allow create, update: if request.auth != null
+                              && request.auth.uid == uid
+                              && request.resource.data.estrellas is int
+                              && request.resource.data.estrellas >= 1
+                              && request.resource.data.estrellas <= 5;
+        allow delete: if false;
+      }
+
+      // Comentarios anónimos: se pueden crear y borrar (solo el autor puede borrar el suyo), nunca editar.
+      match /comentarios/{comentarioId} {
+        allow read: if true;
+        allow create: if request.auth != null
+                      && request.resource.data.creadoPor == request.auth.uid
+                      && request.resource.data.texto is string
+                      && request.resource.data.texto.size() > 0
+                      && request.resource.data.texto.size() <= 400;
+        allow update: if false;
+        allow delete: if request.auth != null && request.auth.uid == resource.data.creadoPor;
+      }
     }
   }
 }

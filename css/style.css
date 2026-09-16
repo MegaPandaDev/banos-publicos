@@ -59,52 +59,146 @@ body {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
 }
 
-/* Popups */
-.leaflet-popup-content-wrapper {
-  border-radius: 12px;
-}
-
-.popup-lavabo h3 {
-  margin: 0 0 0.35rem;
-  font-size: 1rem;
-}
-
-.popup-lavabo p {
-  margin: 0 0 0.6rem;
-  font-size: 0.9rem;
-  color: #374151;
-}
-
-.popup-acciones {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.popup-acciones button {
+/* Hoja de detalle de un baño */
+.btn-cerrar {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.9rem;
   border: none;
-  border-radius: 8px;
-  padding: 0.45rem 0.7rem;
-  font-size: 0.85rem;
+  background: #f1f5f9;
+  color: var(--color-texto);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1rem;
   cursor: pointer;
 }
 
-.btn-como-llegar {
-  background: var(--color-primario);
-  color: white;
+#detalle-nombre {
+  margin: 0 2.2rem 0.35rem 0;
+  font-size: 1.15rem;
 }
 
-.btn-como-llegar:hover {
-  background: var(--color-primario-oscuro);
+#detalle-descripcion {
+  margin: 0 0 0.9rem;
+  color: #374151;
+  font-size: 0.9rem;
 }
 
-.btn-reportar {
-  background: #fee2e2;
+.detalle-acciones {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1.1rem;
+}
+
+.detalle-acciones button {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.detalle-seccion {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.9rem;
+  margin-top: 0.9rem;
+}
+
+.detalle-subtitulo {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.detalle-promedio {
+  margin: 0 0 0.9rem;
+  font-size: 1rem;
+}
+
+.estrellas-usuario {
+  display: flex;
+  gap: 0.2rem;
+  margin-bottom: 0.3rem;
+}
+
+.estrella-boton {
+  border: none;
+  background: none;
+  font-size: 1.8rem;
+  line-height: 1;
+  padding: 0.1rem 0.15rem;
+  color: #f59e0b;
+  cursor: pointer;
+}
+
+.lista-comentarios {
+  max-height: 30vh;
+  overflow-y: auto;
+  margin-bottom: 0.7rem;
+}
+
+.comentario {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  margin: 0 0 0.5rem;
+}
+
+.comentario p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #374151;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.btn-borrar-comentario {
+  flex-shrink: 0;
+  border: none;
+  background: none;
   color: var(--color-peligro);
+  font-size: 0.78rem;
+  padding: 0;
+  cursor: pointer;
 }
 
-.btn-reportar:hover {
-  background: #fecaca;
+.sin-comentarios {
+  color: #9ca3af;
+  font-size: 0.88rem;
+  margin: 0 0 0.7rem;
+}
+
+.form-comentario {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-comentario textarea {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.form-comentario button {
+  align-self: flex-end;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.88rem;
+  cursor: pointer;
 }
 
 /* Controles del mapa */

@@ -66,6 +66,40 @@
       </form>
     </div>
 
+    <div id="hoja-detalle" class="hoja" hidden>
+      <button type="button" id="btn-cerrar-detalle" class="btn-cerrar" aria-label="Cerrar">✕</button>
+
+      <h2 id="detalle-nombre"></h2>
+      <p id="detalle-descripcion"></p>
+
+      <div class="detalle-acciones">
+        <button type="button" id="detalle-btn-llegar" class="btn-primario">🧭 Cómo llegar</button>
+        <button type="button" id="detalle-btn-reportar" class="btn-secundario">🚩 Reportar</button>
+      </div>
+
+      <div class="detalle-seccion">
+        <p class="detalle-subtitulo">Valoración</p>
+        <p id="detalle-promedio" class="detalle-promedio"></p>
+        <p class="detalle-subtitulo">Tu puntuación</p>
+        <div id="detalle-estrellas-usuario" class="estrellas-usuario"></div>
+      </div>
+
+      <div class="detalle-seccion">
+        <p class="detalle-subtitulo">Comentarios</p>
+        <div id="lista-comentarios" class="lista-comentarios"></div>
+        <form id="form-comentario" class="form-comentario">
+          <textarea
+            name="comentario"
+            placeholder="Escribe un comentario anónimo..."
+            maxlength="400"
+            rows="2"
+            required
+          ></textarea>
+          <button type="submit" class="btn-primario">Enviar</button>
+        </form>
+      </div>
+    </div>
+
     <div id="toast" class="toast"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

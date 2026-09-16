@@ -1,4 +1,4 @@
-# 🚻 Baños Públicos
+# 🚻 Meaquí
 
 App web (PWA) para encontrar lavabos públicos en un mapa. Cualquier usuario puede:
 

@@ -15,18 +15,34 @@ service cloud.firestore {
                     && request.resource.data.descripcion is string
                     && request.resource.data.descripcion.size() <= 300
                     && request.resource.data.lat is number
+                    && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
                     && request.resource.data.lng is number
+                    && request.resource.data.lng >= -180 && request.resource.data.lng <= 180
                     && request.resource.data.reportes == 0
-                    && request.resource.data.oculto == false;
+                    && request.resource.data.oculto == false
+                    && request.resource.data.creadoPor == request.auth.uid;
 
-      // Actualizar: SOLO se permite incrementar "reportes" en 1 y ajustar "oculto".
-      // Así ningún usuario puede cambiar el nombre/ubicación de un baño ajeno.
+      // Actualizar: SOLO se permite incrementar "reportes" en 1, y "oculto" tiene que
+      // coincidir exactamente con el umbral (3) — así nadie puede ocultar un baño con
+      // una sola llamada directa a Firestore ni forzar el valor contrario.
+      // Además, cada uid solo puede contar una vez (ver /reportes/{uid} más abajo).
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reportes', 'oculto'])
-                    && request.resource.data.reportes == resource.data.reportes + 1;
+                    && request.resource.data.reportes == resource.data.reportes + 1
+                    && request.resource.data.oculto == (request.resource.data.reportes >= 3)
+                    && !exists(/databases/$(database)/documents/banos/$(id)/reportes/$(request.auth.uid));
 
       // Nadie borra documentos desde el cliente.
       allow delete: if false;
+
+      // Un reporte por usuario anónimo y baño (el id del documento es el uid).
+      // Solo existe para que la regla de arriba pueda comprobar "¿ya reportó este uid?";
+      // no se puede leer, actualizar ni borrar.
+      match /reportes/{uid} {
+        allow read: if false;
+        allow create: if request.auth != null && request.auth.uid == uid;
+        allow update, delete: if false;
+      }
 
       // Una valoración (1-5 estrellas) por usuario anónimo y baño.
       // El id del documento es el uid, así cada persona solo puede tener/editar la suya.

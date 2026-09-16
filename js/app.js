@@ -417,10 +417,12 @@ async function reportarLavabo(id) {
 
   try {
     const ref = doc(db, COLECCION, id);
+    const refReporte = doc(db, COLECCION, id, "reportes", uidActual);
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists()) return;
       const reportesActuales = (snap.data().reportes || 0) + 1;
+      tx.set(refReporte, { creadoEn: serverTimestamp() });
       tx.update(ref, {
         reportes: reportesActuales,
         oculto: reportesActuales >= UMBRAL_REPORTES,
@@ -430,6 +432,11 @@ async function reportarLavabo(id) {
     if (idDetalleActual === id) cerrarDetalle();
     mostrarToast("Gracias, hemos registrado tu reporte.", "success");
   } catch (err) {
+    if (err.code === "permission-denied") {
+      marcarComoReportado(id);
+      mostrarToast("Ya has reportado este baño anteriormente.", "info");
+      return;
+    }
     console.error(err);
     mostrarToast("No se pudo enviar el reporte. Inténtalo de nuevo.", "error");
   }

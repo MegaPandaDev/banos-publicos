@@ -67,6 +67,56 @@ body {
   background: rgba(255, 255, 255, 0.28);
 }
 
+.espacio-anuncio {
+  flex: 0 0 auto;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2f5;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  overflow: hidden;
+}
+
+.aviso-cookies {
+  position: fixed;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--sombra);
+  padding: 0.9rem 1rem;
+  z-index: 1300;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.aviso-cookies p {
+  margin: 0 0 0.7rem;
+  font-size: 0.85rem;
+  color: #374151;
+}
+
+.aviso-cookies a {
+  color: var(--color-primario-oscuro);
+}
+
+.aviso-cookies-botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.aviso-cookies-botones .btn-secundario,
+.aviso-cookies-botones .btn-primario {
+  width: auto;
+  margin-bottom: 0;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+}
+
 #map {
   flex: 1 1 auto;
   width: 100%;

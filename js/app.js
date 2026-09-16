@@ -558,6 +558,47 @@ function mostrarToast(mensaje, tipo = "info") {
   toastTimeout = setTimeout(() => toast.classList.remove("visible"), 4000);
 }
 
+// --- Cookies / anuncios ---
+// De momento AD_SENSE_CLIENTE es null (aún no hay cuenta de AdSense aprobada), así que
+// esta sección no hace nada visible: no se muestra el aviso de cookies ni el hueco de
+// anuncio hasta que se rellene con el ID real (ca-pub-XXXXXXXXXXXXXXXX) y se complete
+// cargarAnuncio() con el bloque de anuncio correspondiente.
+const AD_SENSE_CLIENTE = null;
+const CLAVE_CONSENTIMIENTO_ANUNCIOS = "consentimiento_anuncios";
+
+const avisoCookies = document.getElementById("aviso-cookies");
+const btnAceptarCookies = document.getElementById("btn-aceptar-cookies");
+const btnRechazarCookies = document.getElementById("btn-rechazar-cookies");
+const espacioAnuncio = document.getElementById("espacio-anuncio");
+
+function cargarAnuncio() {
+  if (!AD_SENSE_CLIENTE) return;
+  espacioAnuncio.hidden = false;
+  // TODO: insertar aquí el <ins class="adsbygoogle"> con el bloque de anuncio
+  // y cargar https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js
+  // (recuerda añadir ese dominio a la Content-Security-Policy en Render).
+}
+
+if (AD_SENSE_CLIENTE) {
+  const consentimiento = localStorage.getItem(CLAVE_CONSENTIMIENTO_ANUNCIOS);
+  if (consentimiento === "aceptado") {
+    cargarAnuncio();
+  } else if (consentimiento !== "rechazado") {
+    avisoCookies.hidden = false;
+  }
+}
+
+btnAceptarCookies.addEventListener("click", () => {
+  localStorage.setItem(CLAVE_CONSENTIMIENTO_ANUNCIOS, "aceptado");
+  avisoCookies.hidden = true;
+  cargarAnuncio();
+});
+
+btnRechazarCookies.addEventListener("click", () => {
+  localStorage.setItem(CLAVE_CONSENTIMIENTO_ANUNCIOS, "rechazado");
+  avisoCookies.hidden = true;
+});
+
 // --- Service worker (PWA) ---
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

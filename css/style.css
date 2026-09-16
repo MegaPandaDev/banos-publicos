@@ -33,12 +33,32 @@ body {
   color: white;
   padding: env(safe-area-inset-top, 0) 1rem 0.6rem;
   padding-top: calc(env(safe-area-inset-top, 0) + 0.6rem);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.75rem;
 }
 
 .cabecera h1 {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 600;
+}
+
+.enlace-kofi {
+  color: white;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.enlace-kofi:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 #map {

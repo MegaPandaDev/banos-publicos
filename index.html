@@ -7,6 +7,13 @@
     <meta name="description" content="Encuentra y comparte lavabos públicos cerca de ti" />
     <meta name="theme-color" content="#0d9488" />
 
+    <meta property="og:title" content="Meaquí" />
+    <meta property="og:description" content="Encuentra y comparte lavabos públicos cerca de ti" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://banos-publicos.onrender.com" />
+    <meta property="og:image" content="https://banos-publicos.onrender.com/icons/icon-512.png" />
+    <meta name="twitter:card" content="summary" />
+
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" href="icons/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="icons/icon-192.png" />
@@ -40,7 +47,7 @@
       Toca el mapa en el lugar donde está el baño
     </p>
 
-    <button id="btn-añadir" class="fab" type="button" title="Añadir baño">+</button>
+    <button id="btn-añadir" class="fab" type="button" title="Añadir baño" aria-label="Añadir baño">+</button>
 
     <div id="hoja-formulario" class="hoja" hidden>
       <form id="form-lavabo">
@@ -115,6 +122,21 @@
     <div id="espacio-anuncio" class="espacio-anuncio" hidden></div>
 
     <div id="toast" class="toast"></div>
+
+    <div id="aviso-actualizacion" class="aviso-actualizacion" hidden>
+      <span>Hay una versión nueva disponible.</span>
+      <button type="button" id="btn-recargar-actualizacion">Recargar</button>
+    </div>
+
+    <div id="modal-overlay" class="modal-overlay" hidden>
+      <div class="modal-caja">
+        <p id="modal-texto"></p>
+        <div class="modal-botones">
+          <button type="button" id="modal-btn-cancelar" class="btn-secundario">Cancelar</button>
+          <button type="button" id="modal-btn-confirmar" class="btn-peligro">Confirmar</button>
+        </div>
+      </div>
+    </div>
 
     <div id="aviso-cookies" class="aviso-cookies" hidden>
       <p>

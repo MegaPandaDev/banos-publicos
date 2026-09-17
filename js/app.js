@@ -5,7 +5,10 @@ import {
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 import {
+  initializeFirestore,
   getFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   collection,
   addDoc,
   setDoc,
@@ -18,7 +21,6 @@ import {
   doc,
   runTransaction,
   serverTimestamp,
-  enableIndexedDbPersistence,
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -32,12 +34,15 @@ const ZOOM_POR_DEFECTO = 6;
 // --- Firebase ---
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
-const db = getFirestore(firebaseApp);
 
+let db;
 try {
-  await enableIndexedDbPersistence(db);
+  db = initializeFirestore(firebaseApp, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  });
 } catch (err) {
-  console.warn("Persistencia offline no disponible:", err.code);
+  console.warn("Persistencia offline no disponible:", err);
+  db = getFirestore(firebaseApp);
 }
 
 let uidActual = null;
@@ -62,20 +67,25 @@ L.control.zoom({ position: "bottomright" }).addTo(map);
 const iconoLavabo = L.icon({
   className: "marcador-lavabo",
   iconUrl: "icons/marcador-wc.svg",
-  iconSize: [30, 30],
-  iconAnchor: [15, 28],
-  popupAnchor: [0, -26],
+  iconSize: [36, 36],
+  iconAnchor: [18, 34],
+  popupAnchor: [0, -31],
 });
 
-function centrarEnMiUbicacion() {
-  if (!navigator.geolocation) return;
+function centrarEnMiUbicacion(mostrarError = false) {
+  if (!navigator.geolocation) {
+    if (mostrarError) mostrarToast("Tu navegador no permite obtener la ubicación.", "error");
+    return;
+  }
   navigator.geolocation.getCurrentPosition(
     (pos) => {
       const { latitude, longitude } = pos.coords;
       map.setView([latitude, longitude], 15);
     },
     () => {
-      /* usuario denegó o falló: nos quedamos con la vista actual */
+      if (mostrarError) {
+        mostrarToast("No se pudo obtener tu ubicación. Revisa los permisos del navegador.", "error");
+      }
     },
     { enableHighAccuracy: true, timeout: 8000 }
   );
@@ -88,9 +98,10 @@ const BotonUbicacion = L.Control.extend({
     const btn = L.DomUtil.create("button", "boton-mapa boton-ubicacion");
     btn.type = "button";
     btn.title = "Centrar en mi ubicación";
+    btn.setAttribute("aria-label", btn.title);
     btn.innerHTML = "📍";
     L.DomEvent.disableClickPropagation(btn);
-    btn.addEventListener("click", centrarEnMiUbicacion);
+    btn.addEventListener("click", () => centrarEnMiUbicacion(true));
     return btn;
   },
 });
@@ -108,6 +119,7 @@ function escaparHTML(texto) {
 
 const lavabosRef = collection(db, COLECCION);
 const consultaVisibles = query(lavabosRef, where("oculto", "==", false));
+let primerSnapshotBanos = true;
 
 onSnapshot(
   consultaVisibles,
@@ -141,6 +153,17 @@ onSnapshot(
       });
       marcadores.set(id, marcador);
     });
+
+    if (primerSnapshotBanos) {
+      primerSnapshotBanos = false;
+      if (marcadores.size === 0) {
+        mostrarToast(
+          "No hay baños registrados por aquí todavía. ¡Sé el primero en añadir uno con el botón +!",
+          "info",
+          6000
+        );
+      }
+    }
   },
   (error) => {
     console.error(error);
@@ -172,6 +195,7 @@ function abrirDetalle(id) {
   if (!datos) return;
 
   cerrarFormulario();
+  salirModoAñadir();
   idDetalleActual = id;
   detalleNombre.textContent = datos.nombre || "Baño público";
   detalleDescripcion.textContent = datos.descripcion || "Sin instrucciones adicionales.";
@@ -244,6 +268,7 @@ function pintarEstrellasUsuario(id, valorActual) {
     btn.className = "estrella-boton";
     btn.textContent = i <= valorActual ? "★" : "☆";
     btn.title = `Puntuar con ${i} estrella${i > 1 ? "s" : ""}`;
+    btn.setAttribute("aria-label", btn.title);
     btn.addEventListener("click", () => enviarValoracion(id, i));
     detalleEstrellasUsuario.appendChild(btn);
   }
@@ -251,6 +276,8 @@ function pintarEstrellasUsuario(id, valorActual) {
 
 async function enviarValoracion(id, estrellas) {
   if (!uidActual) return;
+  const botones = detalleEstrellasUsuario.querySelectorAll("button");
+  botones.forEach((b) => (b.disabled = true));
   try {
     await setDoc(doc(db, COLECCION, id, "valoraciones", uidActual), {
       estrellas,
@@ -259,6 +286,7 @@ async function enviarValoracion(id, estrellas) {
   } catch (err) {
     console.error(err);
     mostrarToast("No se pudo guardar tu puntuación.", "error");
+    botones.forEach((b) => (b.disabled = false));
   }
 }
 
@@ -353,7 +381,8 @@ async function guardarEdicionComentario(idBano, idComentario, btnGuardar) {
 }
 
 async function borrarComentario(idBano, idComentario) {
-  if (!window.confirm("¿Eliminar este comentario?")) return;
+  const confirmado = await confirmarAccion("¿Eliminar este comentario?");
+  if (!confirmado) return;
   try {
     await deleteDoc(doc(db, COLECCION, idBano, "comentarios", idComentario));
   } catch (err) {
@@ -410,11 +439,12 @@ async function reportarLavabo(id) {
     mostrarToast("Ya has reportado este baño anteriormente.", "info");
     return;
   }
-  const confirmado = window.confirm(
+  const confirmado = await confirmarAccion(
     "¿Seguro que quieres reportar este baño como falso, inexistente o inaccesible?"
   );
   if (!confirmado) return;
 
+  detalleBtnReportar.disabled = true;
   try {
     const ref = doc(db, COLECCION, id);
     const refReporte = doc(db, COLECCION, id, "reportes", uidActual);
@@ -439,6 +469,8 @@ async function reportarLavabo(id) {
     }
     console.error(err);
     mostrarToast("No se pudo enviar el reporte. Inténtalo de nuevo.", "error");
+  } finally {
+    detalleBtnReportar.disabled = false;
   }
 }
 
@@ -453,6 +485,13 @@ const mapaEl = document.getElementById("map");
 
 let modoAñadir = false;
 let marcadorTemporal = null;
+
+function salirModoAñadir() {
+  modoAñadir = false;
+  btnAñadir.classList.remove("activo");
+  avisoModoAñadir.hidden = true;
+  mapaEl.classList.remove("modo-añadir");
+}
 
 btnAñadir.addEventListener("click", () => {
   modoAñadir = !modoAñadir;
@@ -480,10 +519,7 @@ btnUsarUbicacion.addEventListener("click", () => {
 });
 
 function abrirFormulario(latlng) {
-  modoAñadir = false;
-  btnAñadir.classList.remove("activo");
-  avisoModoAñadir.hidden = true;
-  mapaEl.classList.remove("modo-añadir");
+  salirModoAñadir();
 
   if (marcadorTemporal) map.removeLayer(marcadorTemporal);
   marcadorTemporal = L.marker(latlng, {
@@ -548,14 +584,43 @@ formLavabo.addEventListener("submit", async (e) => {
   }
 });
 
-// --- Aviso / toast ---
+// --- Aviso / toast / confirmación ---
 let toastTimeout;
-function mostrarToast(mensaje, tipo = "info") {
+function mostrarToast(mensaje, tipo = "info", duracion = 4000) {
   const toast = document.getElementById("toast");
   toast.textContent = mensaje;
   toast.className = `toast toast-${tipo} visible`;
   clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => toast.classList.remove("visible"), 4000);
+  toastTimeout = setTimeout(() => toast.classList.remove("visible"), duracion);
+}
+
+const modalOverlay = document.getElementById("modal-overlay");
+const modalTexto = document.getElementById("modal-texto");
+const modalBtnCancelar = document.getElementById("modal-btn-cancelar");
+const modalBtnConfirmar = document.getElementById("modal-btn-confirmar");
+
+function confirmarAccion(mensaje) {
+  return new Promise((resolve) => {
+    modalTexto.textContent = mensaje;
+    modalOverlay.hidden = false;
+
+    const limpiar = (resultado) => {
+      modalOverlay.hidden = true;
+      modalBtnConfirmar.removeEventListener("click", onConfirmar);
+      modalBtnCancelar.removeEventListener("click", onCancelar);
+      modalOverlay.removeEventListener("click", onClicFuera);
+      resolve(resultado);
+    };
+    const onConfirmar = () => limpiar(true);
+    const onCancelar = () => limpiar(false);
+    const onClicFuera = (e) => {
+      if (e.target === modalOverlay) limpiar(false);
+    };
+
+    modalBtnConfirmar.addEventListener("click", onConfirmar);
+    modalBtnCancelar.addEventListener("click", onCancelar);
+    modalOverlay.addEventListener("click", onClicFuera);
+  });
 }
 
 // --- Cookies / anuncios ---
@@ -599,8 +664,26 @@ btnRechazarCookies.addEventListener("click", () => {
 });
 
 // --- Service worker (PWA) ---
+const avisoActualizacion = document.getElementById("aviso-actualizacion");
+const btnRecargarActualizacion = document.getElementById("btn-recargar-actualizacion");
+
+btnRecargarActualizacion.addEventListener("click", () => window.location.reload());
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch((err) => console.warn("SW no registrado:", err));
+    navigator.serviceWorker
+      .register("./sw.js")
+      .then((registro) => {
+        registro.addEventListener("updatefound", () => {
+          const nuevoWorker = registro.installing;
+          if (!nuevoWorker) return;
+          nuevoWorker.addEventListener("statechange", () => {
+            if (nuevoWorker.state === "installed" && navigator.serviceWorker.controller) {
+              avisoActualizacion.hidden = false;
+            }
+          });
+        });
+      })
+      .catch((err) => console.warn("SW no registrado:", err));
   });
 }

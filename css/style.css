@@ -91,6 +91,8 @@ textarea {
 
 .cabecera h1 {
   margin: 0;
+  display: flex;
+  align-items: center;
   font-family: var(--fuente-display);
   font-size: 1.35rem;
   font-weight: 600;
@@ -102,6 +104,36 @@ textarea {
   font-size: 0.7rem;
   font-weight: 400;
   opacity: 0.85;
+}
+
+.icono-marca {
+  height: 1.5em;
+  width: auto;
+  margin-right: 0.4rem;
+}
+
+.icono-boton {
+  height: 1.15em;
+  width: auto;
+  vertical-align: -0.22em;
+  margin-right: 0.35em;
+}
+
+.icono-boton-pequeno {
+  height: 0.95em;
+  width: auto;
+  vertical-align: -0.16em;
+  margin-right: 0.3em;
+}
+
+.icono-cerrar {
+  width: 14px;
+  height: 14px;
+}
+
+.icono-control-mapa {
+  width: 20px;
+  height: 20px;
 }
 
 .enlace-donacion {
@@ -281,6 +313,9 @@ textarea {
   height: 32px;
   border-radius: 50%;
   font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
 }
 
@@ -529,6 +564,9 @@ textarea {
   border-radius: var(--radio-s);
   box-shadow: var(--sombra);
   font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
 }
 

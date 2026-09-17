@@ -1,4 +1,4 @@
-const CACHE_NAME = "banos-publicos-v12";
+const CACHE_NAME = "banos-publicos-v13";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -9,6 +9,12 @@ const APP_SHELL = [
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/marcador-wc.svg",
+  "./icons/wc.svg",
+  "./icons/cafe.svg",
+  "./icons/cruz.svg",
+  "./icons/brujula.svg",
+  "./icons/reportar.svg",
+  "./icons/ubicacion.svg",
 ];
 
 self.addEventListener("install", (event) => {

@@ -99,7 +99,7 @@ const BotonUbicacion = L.Control.extend({
     btn.type = "button";
     btn.title = "Centrar en mi ubicación";
     btn.setAttribute("aria-label", btn.title);
-    btn.innerHTML = "📍";
+    btn.innerHTML = '<img src="icons/ubicacion.svg" class="icono-control-mapa" alt="" />';
     L.DomEvent.disableClickPropagation(btn);
     btn.addEventListener("click", () => centrarEnMiUbicacion(true));
     return btn;

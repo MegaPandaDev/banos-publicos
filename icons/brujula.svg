@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="154.96883mm"
+   height="162.61435mm"
+   viewBox="0 0 154.96883 162.61435"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   sodipodi:docname="brujula.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#505050"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.68862935"
+     inkscape:cx="310.03616"
+     inkscape:cy="578.68576"
+     inkscape:window-width="1198"
+     inkscape:window-height="981"
+     inkscape:window-x="-8"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1"
+     fit-margin-top="8"
+     fit-margin-left="8"
+     fit-margin-right="8"
+     fit-margin-bottom="8" />
+  <defs
+     id="defs1">
+    <linearGradient
+       id="swatch6"
+       inkscape:swatch="solid">
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="0"
+         id="stop6" />
+    </linearGradient>
+  </defs>
+  <g
+     inkscape:label="Capa 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-27.515587,-62.011658)">
+    <ellipse
+       style="fill:#ffe700;fill-opacity:1;stroke:#000000;stroke-width:5;stroke-dasharray:none;stroke-opacity:1"
+       id="path1"
+       cx="105"
+       cy="148.5"
+       rx="74.984413"
+       ry="73.626007" />
+    <ellipse
+       style="fill:#1f2937;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none;stroke-opacity:1"
+       id="path4"
+       cx="105"
+       cy="148.5"
+       rx="7.0637498"
+       ry="6.7920671" />
+    <path
+       style="fill:#e5e7eb;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
+       inkscape:label="Triangle"
+       d="m 118.63655,147.62508 -15.48649,12.67113 42.75007,36.44935 z"
+       id="path5" />
+    <path
+       style="fill:#dc2626;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
+       inkscape:label="Triangle"
+       d="M 91.644713,148.5249 107.67251,136.54582 66.563715,98.254949 Z"
+       id="path5-3" />
+    <path
+       id="path6"
+       style="fill:#e7e100;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none;stroke-opacity:1"
+       d="m 164.44526,63.011658 a 15.752911,15.752911 0 0 0 -15.75304,15.753043 15.752911,15.752911 0 0 0 15.75304,15.752527 15.752911,15.752911 0 0 0 15.75253,-15.752527 15.752911,15.752911 0 0 0 -15.75253,-15.753043 z m 0.19172,8.452714 a 7.4922376,7.4922376 0 0 1 7.49257,7.492049 7.4922376,7.4922376 0 0 1 -7.49257,7.492566 7.4922376,7.4922376 0 0 1 -7.49205,-7.492566 7.4922376,7.4922376 0 0 1 7.49205,-7.492049 z" />
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:2;stroke-dasharray:none;stroke-opacity:1"
+       id="rect12"
+       width="3.8421733"
+       height="29.200516"
+       x="95.980408"
+       y="81.29493"
+       ry="1.9210867" />
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:2;stroke-dasharray:none;stroke-opacity:1"
+       id="rect12-7"
+       width="3.8421733"
+       height="29.200516"
+       x="111.14439"
+       y="81.084145"
+       ry="1.9210867" />
+    <rect
+       style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:2.19956;stroke-dasharray:none;stroke-opacity:1"
+       id="rect12-3"
+       width="4.1252899"
+       height="32.894604"
+       x="38.984131"
+       y="125.57682"
+       ry="2.1641188"
+       transform="matrix(0.78233219,-0.62286141,0.51721098,0.85585794,0,0)" />
+    <text
+       xml:space="preserve"
+       style="font-size:22.5778px;writing-mode:lr-tb;direction:ltr;fill:#000000;fill-opacity:1;stroke:none;stroke-width:2;stroke-dasharray:none;stroke-opacity:1"
+       x="98.757225"
+       y="212.18417"
+       id="text12"><tspan
+         sodipodi:role="line"
+         id="tspan12"
+         style="font-size:22.5778px;stroke-width:2"
+         x="98.757225"
+         y="212.18417">S</tspan></text>
+  </g>
+</svg>

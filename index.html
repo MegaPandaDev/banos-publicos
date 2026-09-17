@@ -39,13 +39,19 @@
   </head>
   <body>
     <header class="cabecera">
-      <h1>🚻 Meaquí <span class="marca-autor">by MegaPandaDev</span></h1>
+      <h1>
+        <img src="icons/wc.svg" class="icono-marca" alt="" />
+        Meaquí <span class="marca-autor">by MegaPandaDev</span>
+      </h1>
       <a
         class="enlace-donacion"
         href="https://buymeacoffee.com/megapandadev"
         target="_blank"
         rel="noopener"
-      >☕ Invítame a un café</a>
+      >
+        <img src="icons/cafe.svg" class="icono-boton-pequeno" alt="" />
+        Invítame a un café
+      </a>
     </header>
 
     <div id="map"></div>
@@ -82,7 +88,8 @@
         </label>
 
         <button type="button" id="btn-usar-ubicacion" class="btn-secundario">
-          📍 Usar mi ubicación actual
+          <img src="icons/ubicacion.svg" class="icono-boton" alt="" />
+          Usar mi ubicación actual
         </button>
 
         <div class="hoja-acciones">
@@ -93,14 +100,22 @@
     </div>
 
     <div id="hoja-detalle" class="hoja" hidden>
-      <button type="button" id="btn-cerrar-detalle" class="btn-cerrar" aria-label="Cerrar">✕</button>
+      <button type="button" id="btn-cerrar-detalle" class="btn-cerrar" aria-label="Cerrar">
+        <img src="icons/cruz.svg" class="icono-cerrar" alt="" />
+      </button>
 
       <h2 id="detalle-nombre"></h2>
       <p id="detalle-descripcion"></p>
 
       <div class="detalle-acciones">
-        <button type="button" id="detalle-btn-llegar" class="btn-primario">🧭 Cómo llegar</button>
-        <button type="button" id="detalle-btn-reportar" class="btn-secundario">🚩 Reportar</button>
+        <button type="button" id="detalle-btn-llegar" class="btn-primario">
+          <img src="icons/brujula.svg" class="icono-boton" alt="" />
+          Cómo llegar
+        </button>
+        <button type="button" id="detalle-btn-reportar" class="btn-secundario">
+          <img src="icons/reportar.svg" class="icono-boton" alt="" />
+          Reportar
+        </button>
       </div>
 
       <div class="detalle-seccion">

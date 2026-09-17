@@ -25,6 +25,10 @@ import {
 import { firebaseConfig } from "./firebase-config.js";
 
 const COLECCION = "banos";
+// UID de Firebase Auth del dispositivo/navegador del moderador. Se obtiene abriendo la
+// app con "?verid" en la URL (una vez, en el dispositivo que uses para moderar) y
+// pegándolo aquí; debe coincidir con el mismo UID que se autoriza en firestore.rules.
+const UID_MODERADOR = "";
 const UMBRAL_REPORTES = 3;
 const UMBRAL_ESTRELLAS_BUENO = 3;
 const CLAVE_REPORTADOS = "banos_reportados";
@@ -48,7 +52,15 @@ try {
 let uidActual = null;
 onAuthStateChanged(auth, (user) => {
   uidActual = user ? user.uid : null;
+  // Vía de acceso oculta para que el moderador recupere el identificador estable de su
+  // propio dispositivo (sin pantalla de login): abrir la app con "?verid" en la URL.
+  if (uidActual && new URLSearchParams(location.search).has("verid")) {
+    window.prompt("Identificador de este dispositivo (cópialo):", uidActual);
+  }
 });
+function esModerador() {
+  return Boolean(UID_MODERADOR) && uidActual === UID_MODERADOR;
+}
 signInAnonymously(auth).catch((err) => {
   console.error(err);
   mostrarToast("No se pudo conectar. Revisa tu conexión a internet.", "error");
@@ -200,6 +212,8 @@ const detalleNombre = document.getElementById("detalle-nombre");
 const detalleDescripcion = document.getElementById("detalle-descripcion");
 const detalleBtnLlegar = document.getElementById("detalle-btn-llegar");
 const detalleBtnReportar = document.getElementById("detalle-btn-reportar");
+const detalleBtnEditar = document.getElementById("detalle-btn-editar");
+const detalleBtnEliminar = document.getElementById("detalle-btn-eliminar");
 const detallePromedio = document.getElementById("detalle-promedio");
 const detalleEstrellasUsuario = document.getElementById("detalle-estrellas-usuario");
 const listaComentarios = document.getElementById("lista-comentarios");
@@ -220,6 +234,8 @@ function abrirDetalle(id) {
   detalleDescripcion.textContent = datos.descripcion || "Sin instrucciones adicionales.";
   detalleBtnLlegar.dataset.lat = datos.lat;
   detalleBtnLlegar.dataset.lng = datos.lng;
+  detalleBtnEditar.hidden = !esModerador();
+  detalleBtnEliminar.hidden = !esModerador();
 
   cargarValoraciones(id);
   cargarComentarios(id);
@@ -249,6 +265,30 @@ detalleBtnLlegar.addEventListener("click", (e) => {
 
 detalleBtnReportar.addEventListener("click", () => {
   if (idDetalleActual) reportarLavabo(idDetalleActual);
+});
+
+detalleBtnEditar.addEventListener("click", () => {
+  if (idDetalleActual) abrirFormularioEdicion(idDetalleActual);
+});
+
+detalleBtnEliminar.addEventListener("click", async () => {
+  if (!idDetalleActual) return;
+  const confirmado = await confirmarAccion(
+    "¿Eliminar definitivamente este baño? Esta acción no se puede deshacer."
+  );
+  if (!confirmado) return;
+  const id = idDetalleActual;
+  detalleBtnEliminar.disabled = true;
+  try {
+    await deleteDoc(doc(db, COLECCION, id));
+    mostrarToast("Baño eliminado.", "success");
+    cerrarDetalle();
+  } catch (err) {
+    console.error(err);
+    mostrarToast("No se pudo eliminar el baño.", "error");
+  } finally {
+    detalleBtnEliminar.disabled = false;
+  }
 });
 
 function cargarValoraciones(id) {
@@ -533,9 +573,12 @@ const formLavabo = document.getElementById("form-lavabo");
 const btnCancelarForm = document.getElementById("btn-cancelar-form");
 const btnUsarUbicacion = document.getElementById("btn-usar-ubicacion");
 const mapaEl = document.getElementById("map");
+const formularioTitulo = document.getElementById("form-lavabo-titulo");
+const formularioBtnGuardar = formLavabo.querySelector("button[type=submit]");
 
 let modoAñadir = false;
 let marcadorTemporal = null;
+let modoEdicionId = null;
 
 function salirModoAñadir() {
   modoAñadir = false;
@@ -571,6 +614,9 @@ btnUsarUbicacion.addEventListener("click", () => {
 
 function abrirFormulario(latlng) {
   salirModoAñadir();
+  modoEdicionId = null;
+  formularioTitulo.textContent = "Añadir baño público";
+  formularioBtnGuardar.textContent = "Guardar";
 
   if (marcadorTemporal) map.removeLayer(marcadorTemporal);
   marcadorTemporal = L.marker(latlng, {
@@ -592,8 +638,43 @@ function abrirFormulario(latlng) {
   hojaFormulario.hidden = false;
 }
 
+function abrirFormularioEdicion(id) {
+  const datos = datosLavabos.get(id);
+  if (!datos) return;
+
+  cerrarDetalle();
+  salirModoAñadir();
+  modoEdicionId = id;
+  formularioTitulo.textContent = "Editar baño público";
+  formularioBtnGuardar.textContent = "Guardar cambios";
+
+  const latlng = L.latLng(datos.lat, datos.lng);
+  if (marcadorTemporal) map.removeLayer(marcadorTemporal);
+  marcadorTemporal = L.marker(latlng, {
+    icon: iconoLavabo,
+    draggable: true,
+    opacity: 0.85,
+  }).addTo(map);
+  map.panTo(latlng);
+
+  formLavabo.dataset.lat = latlng.lat;
+  formLavabo.dataset.lng = latlng.lng;
+
+  marcadorTemporal.on("dragend", () => {
+    const pos = marcadorTemporal.getLatLng();
+    formLavabo.dataset.lat = pos.lat;
+    formLavabo.dataset.lng = pos.lng;
+  });
+
+  formLavabo.reset();
+  formLavabo.elements["nombre"].value = datos.nombre || "";
+  formLavabo.elements["descripcion"].value = datos.descripcion || "";
+  hojaFormulario.hidden = false;
+}
+
 function cerrarFormulario() {
   hojaFormulario.hidden = true;
+  modoEdicionId = null;
   if (marcadorTemporal) {
     map.removeLayer(marcadorTemporal);
     marcadorTemporal = null;
@@ -615,17 +696,22 @@ formLavabo.addEventListener("submit", async (e) => {
   const btnGuardar = formLavabo.querySelector("button[type=submit]");
   btnGuardar.disabled = true;
   try {
-    await addDoc(collection(db, COLECCION), {
-      nombre,
-      descripcion,
-      lat,
-      lng,
-      reportes: 0,
-      oculto: false,
-      creadoEn: serverTimestamp(),
-      creadoPor: uidActual,
-    });
-    mostrarToast("¡Gracias! El baño se ha añadido al mapa.", "success");
+    if (modoEdicionId) {
+      await updateDoc(doc(db, COLECCION, modoEdicionId), { nombre, descripcion, lat, lng });
+      mostrarToast("Baño actualizado.", "success");
+    } else {
+      await addDoc(collection(db, COLECCION), {
+        nombre,
+        descripcion,
+        lat,
+        lng,
+        reportes: 0,
+        oculto: false,
+        creadoEn: serverTimestamp(),
+        creadoPor: uidActual,
+      });
+      mostrarToast("¡Gracias! El baño se ha añadido al mapa.", "success");
+    }
     cerrarFormulario();
   } catch (err) {
     console.error(err);

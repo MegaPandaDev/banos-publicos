@@ -71,19 +71,25 @@ async function obtenerTokenHumano() {
   if (!turnstileSiteKey) return null;
   await cargarScriptTurnstile();
 
+  // Turnstile no tiene un tamaño "invisible" como reCAPTCHA: se consigue con
+  // appearance "interaction-only" (no se ve nada salvo que Cloudflare decida
+  // que hace falta interacción) + execution "execute" (no arranca solo al
+  // renderizar, hay que llamar a turnstile.execute() cada vez).
+  if (turnstileWidgetId === null) {
+    turnstileWidgetId = turnstile.render("#turnstile-contenedor", {
+      sitekey: turnstileSiteKey,
+      appearance: "interaction-only",
+      execution: "execute",
+      callback: (token) => resolverTurnstileActual && resolverTurnstileActual(token),
+      "error-callback": () => resolverTurnstileActual && resolverTurnstileActual(null),
+    });
+  } else {
+    turnstile.reset(turnstileWidgetId);
+  }
+
   return new Promise((resolve) => {
     resolverTurnstileActual = resolve;
-    if (turnstileWidgetId === null) {
-      turnstileWidgetId = turnstile.render("#turnstile-contenedor", {
-        sitekey: turnstileSiteKey,
-        size: "invisible",
-        callback: (token) => resolverTurnstileActual && resolverTurnstileActual(token),
-        "error-callback": () => resolverTurnstileActual && resolverTurnstileActual(null),
-      });
-    } else {
-      turnstile.reset(turnstileWidgetId);
-      turnstile.execute(turnstileWidgetId);
-    }
+    turnstile.execute(turnstileWidgetId);
   });
 }
 

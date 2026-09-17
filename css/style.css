@@ -1,6 +1,8 @@
 :root {
   --color-primario: #0d9488;
   --color-primario-oscuro: #0f766e;
+  --color-acento: #f59e0b;
+  --color-acento-oscuro: #d97706;
   --color-peligro: #dc2626;
   --color-texto: #1f2937;
   --color-texto-suave: #374151;
@@ -15,6 +17,12 @@
   --color-boton-cancelar: #e5e7eb;
   --sombra: 0 2px 10px rgba(0, 0, 0, 0.15);
   --altura-anuncio: 50px;
+  --fuente-cuerpo: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fuente-display: "Fredoka", var(--fuente-cuerpo);
+  --radio-s: 10px;
+  --radio-m: 16px;
+  --radio-l: 24px;
+  --curva-salida: cubic-bezier(0.23, 1, 0.32, 1);
   color-scheme: light dark;
 }
 
@@ -22,6 +30,8 @@
   :root {
     --color-primario: #14b8a6;
     --color-primario-oscuro: #0d9488;
+    --color-acento: #fbbf24;
+    --color-acento-oscuro: #f59e0b;
     --color-peligro: #f87171;
     --color-texto: #f1f5f9;
     --color-texto-suave: #cbd5e1;
@@ -45,7 +55,7 @@ html,
 body {
   height: 100%;
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--fuente-cuerpo);
   color: var(--color-texto);
   background: var(--color-fondo);
 }
@@ -65,27 +75,34 @@ textarea {
 
 .cabecera {
   flex: 0 0 auto;
-  background: var(--color-primario);
+  background: linear-gradient(135deg, var(--color-primario), var(--color-primario-oscuro));
   color: white;
-  padding: env(safe-area-inset-top, 0) 1rem 0.6rem;
+  padding: env(safe-area-inset-top, 0) 1rem 0.7rem;
   padding-top: calc(env(safe-area-inset-top, 0) + 0.6rem);
+  border-radius: 0 0 var(--radio-m) var(--radio-m);
+  box-shadow: var(--sombra);
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.3rem 0.75rem;
+  position: relative;
+  z-index: 10;
 }
 
 .cabecera h1 {
   margin: 0;
-  font-size: 1.15rem;
+  font-family: var(--fuente-display);
+  font-size: 1.35rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .marca-autor {
+  font-family: var(--fuente-cuerpo);
   font-size: 0.7rem;
   font-weight: 400;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 .enlace-kofi {
@@ -97,10 +114,7 @@ textarea {
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-}
-
-.enlace-kofi:hover {
-  background: rgba(255, 255, 255, 0.28);
+  transition: background 0.15s var(--curva-salida);
 }
 
 .espacio-anuncio {
@@ -126,7 +140,7 @@ textarea {
   right: 0.75rem;
   bottom: 0.75rem;
   background: var(--color-superficie);
-  border-radius: 12px;
+  border-radius: var(--radio-m);
   box-shadow: var(--sombra);
   padding: 0.9rem 1rem;
   z-index: 1300;
@@ -160,7 +174,7 @@ textarea {
 
 .aviso-actualizacion {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0) + 3.4rem);
+  top: calc(env(safe-area-inset-top, 0) + 3.6rem);
   left: 50%;
   transform: translateX(-50%);
   background: var(--color-chip);
@@ -174,6 +188,7 @@ textarea {
   align-items: center;
   gap: 0.6rem;
   max-width: 92%;
+  animation: entrada-chip 0.3s var(--curva-salida);
 }
 
 .aviso-actualizacion button {
@@ -188,10 +203,6 @@ textarea {
   color: white;
 }
 
-.aviso-actualizacion button:hover {
-  background: var(--color-primario-oscuro);
-}
-
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -201,16 +212,18 @@ textarea {
   justify-content: center;
   z-index: 1400;
   padding: 1rem;
+  animation: entrada-fundido 0.2s ease-out;
 }
 
 .modal-caja {
   background: var(--color-superficie);
   color: var(--color-texto);
-  border-radius: 12px;
+  border-radius: var(--radio-m);
   padding: 1.2rem;
   max-width: 340px;
   width: 100%;
   box-shadow: var(--sombra);
+  animation: entrada-modal 0.22s var(--curva-salida);
 }
 
 .modal-caja p {
@@ -263,13 +276,11 @@ textarea {
   cursor: pointer;
 }
 
-.btn-cerrar:hover {
-  filter: brightness(0.95);
-}
-
 #detalle-nombre {
   margin: 0 2.2rem 0.35rem 0;
-  font-size: 1.15rem;
+  font-family: var(--fuente-display);
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 #detalle-descripcion {
@@ -287,7 +298,7 @@ textarea {
 .detalle-acciones button {
   flex: 1;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radio-s);
   padding: 0.65rem;
   font-size: 0.9rem;
   cursor: pointer;
@@ -309,8 +320,24 @@ textarea {
 }
 
 .detalle-promedio {
+  display: inline-flex;
+  align-items: center;
   margin: 0 0 0.9rem;
-  font-size: 1rem;
+  font-family: var(--fuente-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  background: var(--color-superficie-sutil);
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radio-s);
+  transition: background 0.2s var(--curva-salida);
+}
+
+.detalle-promedio.promedio-bueno {
+  background: color-mix(in srgb, #ec4899 16%, var(--color-superficie-sutil));
+}
+
+.detalle-promedio.promedio-malo {
+  background: color-mix(in srgb, #92400e 14%, var(--color-superficie-sutil));
 }
 
 .estrellas-usuario {
@@ -325,12 +352,9 @@ textarea {
   font-size: 1.8rem;
   line-height: 1;
   padding: 0.1rem 0.15rem;
-  color: #f59e0b;
+  color: var(--color-acento);
   cursor: pointer;
-}
-
-.estrella-boton:hover {
-  transform: scale(1.1);
+  transition: transform 0.15s var(--curva-salida);
 }
 
 .estrella-boton:disabled {
@@ -351,7 +375,7 @@ textarea {
   align-items: flex-start;
   gap: 0.6rem;
   background: var(--color-superficie-sutil);
-  border-radius: 8px;
+  border-radius: var(--radio-s);
   padding: 0.5rem 0.7rem;
   margin: 0 0 0.5rem;
 }
@@ -387,14 +411,9 @@ textarea {
   color: var(--color-primario);
 }
 
-.btn-borrar-comentario:hover,
-.btn-editar-comentario:hover {
-  text-decoration: underline;
-}
-
 .comentario-editando {
   background: var(--color-superficie-sutil);
-  border-radius: 8px;
+  border-radius: var(--radio-s);
   padding: 0.5rem 0.7rem;
   margin: 0 0 0.5rem;
 }
@@ -403,7 +422,7 @@ textarea {
   width: 100%;
   padding: 0.45rem 0.55rem;
   border: 1px solid var(--color-borde-input);
-  border-radius: 8px;
+  border-radius: var(--radio-s);
   font-size: 0.88rem;
   font-family: inherit;
   resize: vertical;
@@ -418,7 +437,7 @@ textarea {
 
 .editar-comentario-acciones button {
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radio-s);
   padding: 0.35rem 0.7rem;
   font-size: 0.8rem;
   cursor: pointer;
@@ -429,23 +448,24 @@ textarea {
   color: white;
 }
 
-.btn-guardar-comentario:hover {
-  background: var(--color-primario-oscuro);
-}
-
 .btn-cancelar-comentario {
   background: var(--color-boton-cancelar);
   color: var(--color-texto);
 }
 
-.btn-cancelar-comentario:hover {
-  filter: brightness(0.95);
-}
-
 .sin-comentarios {
+  text-align: center;
   color: var(--color-texto-tenue);
   font-size: 0.88rem;
   margin: 0 0 0.7rem;
+  padding: 0.6rem 0.5rem;
+}
+
+.sin-comentarios::before {
+  content: "💬";
+  display: block;
+  font-size: 1.7rem;
+  margin-bottom: 0.3rem;
 }
 
 .form-comentario {
@@ -457,7 +477,7 @@ textarea {
 .form-comentario textarea {
   padding: 0.55rem 0.65rem;
   border: 1px solid var(--color-borde-input);
-  border-radius: 8px;
+  border-radius: var(--radio-s);
   font-size: 0.9rem;
   font-family: inherit;
   resize: vertical;
@@ -466,7 +486,7 @@ textarea {
 .form-comentario button {
   align-self: flex-end;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radio-s);
   padding: 0.5rem 1rem;
   font-size: 0.88rem;
   cursor: pointer;
@@ -478,14 +498,10 @@ textarea {
   height: 40px;
   background: var(--color-superficie);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radio-s);
   box-shadow: var(--sombra);
   font-size: 1.1rem;
   cursor: pointer;
-}
-
-.boton-mapa:hover {
-  filter: brightness(0.95);
 }
 
 .boton-ubicacion {
@@ -495,7 +511,7 @@ textarea {
 /* Aviso flotante modo añadir */
 .aviso-flotante {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0) + 64px);
+  top: calc(env(safe-area-inset-top, 0) + 74px);
   left: 50%;
   transform: translateX(-50%);
   background: var(--color-chip);
@@ -507,6 +523,7 @@ textarea {
   z-index: 1000;
   max-width: 90%;
   text-align: center;
+  animation: entrada-chip 0.3s var(--curva-salida);
 }
 
 /* Botón flotante añadir */
@@ -520,16 +537,13 @@ textarea {
   border: none;
   background: var(--color-primario);
   color: white;
+  font-family: var(--fuente-display);
   font-size: 2rem;
   line-height: 1;
   box-shadow: var(--sombra);
   cursor: pointer;
   z-index: 1000;
-  transition: transform 0.15s ease, background 0.15s ease;
-}
-
-.fab:hover {
-  background: var(--color-primario-oscuro);
+  transition: transform 0.15s var(--curva-salida), background 0.15s var(--curva-salida);
 }
 
 .fab:active {
@@ -562,7 +576,7 @@ body.con-anuncio .leaflet-bottom {
   right: 0;
   bottom: 0;
   background: var(--color-superficie);
-  border-radius: 16px 16px 0 0;
+  border-radius: var(--radio-l) var(--radio-l) 0 0;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
   padding: 1rem 1.25rem calc(env(safe-area-inset-bottom, 0) + 1.25rem);
   z-index: 1100;
@@ -570,9 +584,15 @@ body.con-anuncio .leaflet-bottom {
   overflow-y: auto;
 }
 
+.hoja:not([hidden]) {
+  animation: entrada-hoja 0.28s var(--curva-salida);
+}
+
 .hoja h2 {
   margin: 0 0 0.75rem;
-  font-size: 1.1rem;
+  font-family: var(--fuente-display);
+  font-size: 1.2rem;
+  font-weight: 600;
 }
 
 .hoja label {
@@ -590,7 +610,7 @@ body.con-anuncio .leaflet-bottom {
   margin-top: 0.35rem;
   padding: 0.6rem 0.7rem;
   border: 1px solid var(--color-borde-input);
-  border-radius: 8px;
+  border-radius: var(--radio-s);
   font-size: 1rem;
   font-family: inherit;
   resize: vertical;
@@ -606,16 +626,12 @@ body.con-anuncio .leaflet-bottom {
   background: var(--color-boton-secundario);
   color: var(--color-texto);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radio-s);
   padding: 0.65rem 0.9rem;
   font-size: 0.9rem;
   cursor: pointer;
   width: 100%;
   margin-bottom: 0.85rem;
-}
-
-.btn-secundario:hover {
-  filter: brightness(0.95);
 }
 
 .btn-secundario:disabled {
@@ -631,7 +647,7 @@ body.con-anuncio .leaflet-bottom {
 .hoja-acciones button {
   flex: 1;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radio-s);
   padding: 0.7rem;
   font-size: 0.95rem;
   cursor: pointer;
@@ -647,10 +663,6 @@ body.con-anuncio .leaflet-bottom {
   font-weight: 600;
 }
 
-.btn-primario:hover {
-  background: var(--color-primario-oscuro);
-}
-
 .btn-primario:disabled {
   opacity: 0.6;
   cursor: default;
@@ -661,12 +673,8 @@ body.con-anuncio .leaflet-bottom {
   color: white;
   font-weight: 600;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radio-s);
   cursor: pointer;
-}
-
-.btn-peligro:hover {
-  filter: brightness(0.9);
 }
 
 /* Toast */
@@ -674,7 +682,7 @@ body.con-anuncio .leaflet-bottom {
   position: fixed;
   left: 50%;
   bottom: calc(env(safe-area-inset-bottom, 0) + 6.5rem);
-  transform: translateX(-50%) translateY(20px);
+  transform: translateX(-50%) translateY(16px);
   background: var(--color-chip);
   color: white;
   padding: 0.6rem 1rem;
@@ -684,7 +692,7 @@ body.con-anuncio .leaflet-bottom {
   text-align: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.2s var(--curva-salida), transform 0.2s var(--curva-salida);
   z-index: 1200;
 }
 
@@ -699,4 +707,109 @@ body.con-anuncio .leaflet-bottom {
 
 .toast-success {
   background: var(--color-primario-oscuro);
+}
+
+/* --- Animaciones de entrada --- */
+@keyframes entrada-hoja {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes entrada-modal {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes entrada-fundido {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes entrada-chip {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hoja:not([hidden]),
+  .modal-overlay,
+  .modal-caja,
+  .aviso-actualizacion,
+  .aviso-flotante {
+    animation: none;
+  }
+}
+
+/* --- Estados :hover (solo para quien realmente tiene ratón) --- */
+@media (hover: hover) and (pointer: fine) {
+  .enlace-kofi:hover {
+    background: rgba(255, 255, 255, 0.28);
+  }
+
+  .aviso-actualizacion button:hover {
+    background: var(--color-primario-oscuro);
+  }
+
+  .btn-cerrar:hover {
+    filter: brightness(0.95);
+  }
+
+  .estrella-boton:hover {
+    transform: scale(1.12);
+  }
+
+  .btn-borrar-comentario:hover,
+  .btn-editar-comentario:hover {
+    text-decoration: underline;
+  }
+
+  .btn-guardar-comentario:hover {
+    background: var(--color-primario-oscuro);
+  }
+
+  .btn-cancelar-comentario:hover {
+    filter: brightness(0.95);
+  }
+
+  .boton-mapa:hover {
+    filter: brightness(0.95);
+  }
+
+  .fab:hover {
+    background: var(--color-primario-oscuro);
+  }
+
+  .btn-secundario:hover {
+    filter: brightness(0.95);
+  }
+
+  .btn-primario:hover {
+    background: var(--color-primario-oscuro);
+  }
+
+  .btn-peligro:hover {
+    filter: brightness(0.9);
+  }
 }

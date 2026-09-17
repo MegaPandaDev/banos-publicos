@@ -252,12 +252,16 @@ function cargarValoraciones(id) {
 function pintarPromedio(promedio, total) {
   if (total === 0) {
     detallePromedio.textContent = "Aún sin valoraciones. ¡Sé el primero!";
+    detallePromedio.classList.remove("promedio-bueno", "promedio-malo");
     return;
   }
   const redondeado = Math.round(promedio);
   const estrellas = "★".repeat(redondeado) + "☆".repeat(5 - redondeado);
-  const emoji = promedio >= UMBRAL_ESTRELLAS_BUENO ? "🌸" : "💩";
+  const esBueno = promedio >= UMBRAL_ESTRELLAS_BUENO;
+  const emoji = esBueno ? "🌸" : "💩";
   detallePromedio.textContent = `${estrellas} ${promedio.toFixed(1)} (${total}) ${emoji}`;
+  detallePromedio.classList.toggle("promedio-bueno", esBueno);
+  detallePromedio.classList.toggle("promedio-malo", !esBueno);
 }
 
 function pintarEstrellasUsuario(id, valorActual) {

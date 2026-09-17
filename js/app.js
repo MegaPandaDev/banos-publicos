@@ -87,8 +87,18 @@ async function obtenerTokenHumano() {
     turnstile.reset(turnstileWidgetId);
   }
 
+  // Si Turnstile no responde en un tiempo razonable (red lenta, navegador que
+  // bloquea el iframe, lo que sea), no dejamos el botón bloqueado para siempre:
+  // seguimos con token null y que decida el servidor (ver turnstile.py).
   return new Promise((resolve) => {
-    resolverTurnstileActual = resolve;
+    let resuelto = false;
+    const terminar = (token) => {
+      if (resuelto) return;
+      resuelto = true;
+      resolve(token);
+    };
+    resolverTurnstileActual = terminar;
+    setTimeout(() => terminar(null), 8000);
     turnstile.execute(turnstileWidgetId);
   });
 }

@@ -79,7 +79,6 @@ textarea {
   color: white;
   padding: env(safe-area-inset-top, 0) 1rem 0.7rem;
   padding-top: calc(env(safe-area-inset-top, 0) + 0.6rem);
-  border-radius: 0 0 var(--radio-m) var(--radio-m);
   box-shadow: var(--sombra);
   display: flex;
   align-items: center;
@@ -105,7 +104,7 @@ textarea {
   opacity: 0.85;
 }
 
-.enlace-kofi {
+.enlace-donacion {
   color: white;
   background: rgba(255, 255, 255, 0.18);
   border-radius: 999px;
@@ -306,6 +305,8 @@ textarea {
 
 .detalle-acciones button {
   flex: 1;
+  width: auto;
+  margin-bottom: 0;
   border: none;
   border-radius: var(--radio-s);
   padding: 0.65rem;
@@ -773,7 +774,7 @@ body.con-anuncio .leaflet-bottom {
 
 /* --- Estados :hover (solo para quien realmente tiene ratón) --- */
 @media (hover: hover) and (pointer: fine) {
-  .enlace-kofi:hover {
+  .enlace-donacion:hover {
     background: rgba(255, 255, 255, 0.28);
   }
 

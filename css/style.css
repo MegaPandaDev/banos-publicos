@@ -124,7 +124,6 @@ textarea {
   bottom: 0;
   height: calc(var(--altura-anuncio) + env(safe-area-inset-bottom, 0));
   padding-bottom: env(safe-area-inset-bottom, 0);
-  display: flex;
   align-items: center;
   justify-content: center;
   background: var(--color-superficie-sutil);
@@ -132,6 +131,10 @@ textarea {
   font-size: 0.75rem;
   overflow: hidden;
   z-index: 950;
+}
+
+.espacio-anuncio:not([hidden]) {
+  display: flex;
 }
 
 .aviso-cookies {
@@ -184,11 +187,14 @@ textarea {
   font-size: 0.82rem;
   box-shadow: var(--sombra);
   z-index: 1250;
-  display: flex;
   align-items: center;
   gap: 0.6rem;
   max-width: 92%;
   animation: entrada-chip 0.3s var(--curva-salida);
+}
+
+.aviso-actualizacion:not([hidden]) {
+  display: flex;
 }
 
 .aviso-actualizacion button {
@@ -207,12 +213,15 @@ textarea {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1400;
   padding: 1rem;
   animation: entrada-fundido 0.2s ease-out;
+}
+
+.modal-overlay:not([hidden]) {
+  display: flex;
 }
 
 .modal-caja {

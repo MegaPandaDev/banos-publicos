@@ -117,6 +117,25 @@ function escaparHTML(texto) {
   return div.innerHTML;
 }
 
+function formatearFechaRelativa(marcaTiempo) {
+  // marcaTiempo puede venir sin resolver todavía (escritura optimista local
+  // con serverTimestamp() pendiente de confirmar), en cuyo caso no hay fecha.
+  if (!marcaTiempo || typeof marcaTiempo.toDate !== "function") return "justo ahora";
+
+  const segundos = Math.floor((Date.now() - marcaTiempo.toDate().getTime()) / 1000);
+  if (segundos < 60) return "justo ahora";
+  const minutos = Math.floor(segundos / 60);
+  if (minutos < 60) return `hace ${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `hace ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  if (dias < 30) return `hace ${dias} d`;
+  const meses = Math.floor(dias / 30);
+  if (meses < 12) return `hace ${meses} mes${meses > 1 ? "es" : ""}`;
+  const años = Math.floor(dias / 365);
+  return `hace ${años} año${años > 1 ? "s" : ""}`;
+}
+
 const lavabosRef = collection(db, COLECCION);
 const consultaVisibles = query(lavabosRef, where("oculto", "==", false));
 let primerSnapshotBanos = true;
@@ -252,6 +271,7 @@ function cargarValoraciones(id) {
 function pintarPromedio(promedio, total) {
   if (total === 0) {
     detallePromedio.textContent = "Aún sin valoraciones. ¡Sé el primero!";
+    detallePromedio.removeAttribute("aria-label");
     detallePromedio.classList.remove("promedio-bueno", "promedio-malo");
     return;
   }
@@ -274,10 +294,16 @@ function pintarPromedio(promedio, total) {
     iconosHTML += `<span class="icono-parcial" style="--relleno:${relleno}%"><span class="icono-valoracion">${emoji}</span></span>`;
   }
 
+  // Los emojis son puramente decorativos (💩/🌸 repetidos); para quien usa
+  // lector de pantalla dejamos en su lugar una frase clara con aria-label.
   detallePromedio.innerHTML = `
-    <span class="iconos-valoracion">${iconosHTML}</span>
-    <span>${valor.toFixed(1)} (${total})</span>
+    <span class="iconos-valoracion" aria-hidden="true">${iconosHTML}</span>
+    <span aria-hidden="true">${valor.toFixed(1)} (${total})</span>
   `;
+  detallePromedio.setAttribute(
+    "aria-label",
+    `Valoración media: ${valor.toFixed(1)} sobre 5, ${esBueno ? "buena" : "mala"}, con ${total} valoracion${total === 1 ? "" : "es"}`
+  );
   detallePromedio.classList.toggle("promedio-bueno", esBueno);
   detallePromedio.classList.toggle("promedio-malo", !esBueno);
 }
@@ -351,7 +377,10 @@ function renderizarComentarios(id) {
       const esPropio = c.creadoPor === uidActual;
       return `
         <div class="comentario">
-          <p>${escaparHTML(c.texto)}</p>
+          <div class="comentario-cuerpo">
+            <p>${escaparHTML(c.texto)}</p>
+            <span class="comentario-fecha">${formatearFechaRelativa(c.creadoEn)}</span>
+          </div>
           ${
             esPropio
               ? `<div class="comentario-acciones-propias">
@@ -623,14 +652,18 @@ const modalBtnConfirmar = document.getElementById("modal-btn-confirmar");
 
 function confirmarAccion(mensaje) {
   return new Promise((resolve) => {
+    const disparador = document.activeElement;
     modalTexto.textContent = mensaje;
     modalOverlay.hidden = false;
+    modalBtnCancelar.focus();
 
     const limpiar = (resultado) => {
       modalOverlay.hidden = true;
       modalBtnConfirmar.removeEventListener("click", onConfirmar);
       modalBtnCancelar.removeEventListener("click", onCancelar);
       modalOverlay.removeEventListener("click", onClicFuera);
+      document.removeEventListener("keydown", onTecla);
+      if (disparador instanceof HTMLElement) disparador.focus();
       resolve(resultado);
     };
     const onConfirmar = () => limpiar(true);
@@ -638,10 +671,24 @@ function confirmarAccion(mensaje) {
     const onClicFuera = (e) => {
       if (e.target === modalOverlay) limpiar(false);
     };
+    const onTecla = (e) => {
+      if (e.key === "Escape") {
+        limpiar(false);
+        return;
+      }
+      // Trampa de foco sencilla: solo hay dos botones, así que Tab/Shift+Tab
+      // se limita a alternar entre ellos en vez de escapar del modal.
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const enCancelar = document.activeElement === modalBtnCancelar;
+        (enCancelar ? modalBtnConfirmar : modalBtnCancelar).focus();
+      }
+    };
 
     modalBtnConfirmar.addEventListener("click", onConfirmar);
     modalBtnCancelar.addEventListener("click", onCancelar);
     modalOverlay.addEventListener("click", onClicFuera);
+    document.addEventListener("keydown", onTecla);
   });
 }
 

@@ -131,6 +131,16 @@ textarea {
   height: 14px;
 }
 
+/* En modo oscuro el trazo del icono (gris muy oscuro) casi no se distingue
+   del fondo del botón (también oscuro); al ser un icono prácticamente a dos
+   tonos (marino + blanco), invertirlo lo deja claro sobre fondo oscuro sin
+   afectar a los iconos de color (café, ubicación, etc.), que no llevan este filtro. */
+@media (prefers-color-scheme: dark) {
+  .icono-cerrar {
+    filter: invert(1);
+  }
+}
+
 .icono-control-mapa {
   width: 20px;
   height: 20px;
@@ -443,12 +453,24 @@ textarea {
   margin: 0 0 0.5rem;
 }
 
+.comentario-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
 .comentario p {
   margin: 0;
   font-size: 0.88rem;
   color: var(--color-texto-suave);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.comentario-fecha {
+  font-size: 0.72rem;
+  color: var(--color-texto-tenue);
 }
 
 .comentario-acciones-propias {

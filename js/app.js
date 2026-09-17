@@ -28,7 +28,7 @@ const COLECCION = "banos";
 // UID de Firebase Auth del dispositivo/navegador del moderador. Se obtiene abriendo la
 // app con "?verid" en la URL (una vez, en el dispositivo que uses para moderar) y
 // pegándolo aquí; debe coincidir con el mismo UID que se autoriza en firestore.rules.
-const UID_MODERADOR = "";
+const UID_MODERADOR = "9LTmP4ZlJEcrLfMVLWwDgf8rPw33";
 const UMBRAL_REPORTES = 3;
 const UMBRAL_ESTRELLAS_BUENO = 3;
 const CLAVE_REPORTADOS = "banos_reportados";

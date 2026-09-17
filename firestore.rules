@@ -7,7 +7,7 @@ service cloud.firestore {
     // en js/app.js). Con el valor de ejemplo de abajo nadie es moderador; sustitúyelo por
     // el UID real antes de publicar estas reglas.
     function esModerador() {
-      return request.auth != null && request.auth.uid == "PENDIENTE_UID_MODERADOR";
+      return request.auth != null && request.auth.uid == "9LTmP4ZlJEcrLfMVLWwDgf8rPw33";
     }
 
     match /banos/{id} {

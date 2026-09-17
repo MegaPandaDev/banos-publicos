@@ -1,5 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import {
+  initializeAppCheck,
+  ReCaptchaV3Provider,
+} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app-check.js";
+import {
   getAuth,
   signInAnonymously,
   onAuthStateChanged,
@@ -34,9 +38,27 @@ const UMBRAL_ESTRELLAS_BUENO = 3;
 const CLAVE_REPORTADOS = "banos_reportados";
 const CENTRO_POR_DEFECTO = [40.4168, -3.7038]; // Madrid, por si no hay geolocalización
 const ZOOM_POR_DEFECTO = 6;
+const RECAPTCHA_SITE_KEY = "6LdCiMAtAAAAAGUqU-yEYCrZQf9OxROu8JKWdqfp";
 
 // --- Firebase ---
 const firebaseApp = initializeApp(firebaseConfig);
+
+// App Check: exige que las peticiones a Firestore vengan de esta app real (via
+// reCAPTCHA v3, invisible para la persona) en vez de un script que use estas mismas
+// claves públicas para spamear ubicaciones/valoraciones/comentarios. En localhost no
+// hay dominio válido para reCAPTCHA, así que se usa el token de depuración: la consola
+// del navegador imprimirá uno la primera vez, y hay que darlo de alta en Firebase
+// Console → App Check → "Administrar tokens de depuración".
+if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+  // Token fijo (no un self.FIREBASE_APPCHECK_DEBUG_TOKEN = true aleatorio) para no
+  // tener que darlo de alta en Firebase Console cada vez que se prueba en local.
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = "66a73049-edc5-418e-b424-727ebf039299";
+}
+initializeAppCheck(firebaseApp, {
+  provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+  isTokenAutoRefreshEnabled: true,
+});
+
 const auth = getAuth(firebaseApp);
 
 let db;

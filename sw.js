@@ -1,10 +1,9 @@
-const CACHE_NAME = "banos-publicos-v18";
+const CACHE_NAME = "banos-publicos-v20";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./css/style.css",
   "./js/app.js",
-  "./js/firebase-config.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -37,8 +36,11 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  // Deja pasar peticiones a Firebase/CDNs sin tocar: solo cacheamos el shell propio.
-  if (url.origin !== self.location.origin) return;
+  // Deja pasar sin tocar: peticiones a CDNs externos, y cualquier cosa que no sea GET
+  // (las llamadas a /api/... son en su mayoría POST/PUT/DELETE y nunca deben servirse
+  // desde caché; los GET a /api/... tampoco están precacheados, así que siempre van a
+  // la red).
+  if (url.origin !== self.location.origin || event.request.method !== "GET") return;
 
   event.respondWith(
     caches.match(event.request).then((cached) => cached || fetch(event.request))

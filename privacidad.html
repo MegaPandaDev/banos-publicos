@@ -84,10 +84,16 @@
           se usa solo en tu dispositivo.
         </li>
         <li>
-          <strong>Identificador anónimo:</strong> al abrir la app se te asigna un
-          identificador anónimo automático (a través de Firebase Authentication) para que
-          puedas editar o borrar tus propias aportaciones. No está vinculado a tu nombre,
-          correo ni ningún otro dato personal, y no requiere registro.
+          <strong>Identificador anónimo:</strong> al abrir la app se guarda en tu navegador
+          una cookie con un identificador aleatorio, para que puedas editar o borrar tus
+          propias aportaciones. No está vinculado a tu nombre, correo ni ningún otro dato
+          personal, y no requiere registro.
+        </li>
+        <li>
+          <strong>Verificación antibots (Cloudflare Turnstile):</strong> al crear un baño,
+          comentar o reportar, Cloudflare comprueba de forma invisible que la petición viene
+          de una persona y no de un programa automatizado, para evitar el uso abusivo de la
+          app. Esto puede implicar el uso de una cookie técnica de Cloudflare.
         </li>
         <li>
           <strong>Contenido que compartes voluntariamente:</strong> el nombre e
@@ -110,8 +116,9 @@
 
       <h2>Con quién se comparten los datos</h2>
       <ul>
-        <li><strong>Firebase / Google Cloud:</strong> aloja la base de datos (Firestore) y la autenticación anónima.</li>
-        <li><strong>Render:</strong> aloja el sitio web.</li>
+        <li><strong>Render:</strong> aloja el sitio web y el servidor de la app.</li>
+        <li><strong>Neon:</strong> aloja la base de datos donde se guardan los baños, valoraciones y comentarios.</li>
+        <li><strong>Cloudflare (Turnstile):</strong> verifica que las acciones las realiza una persona, no un robot.</li>
         <li><strong>Google AdSense:</strong> cuando esté activo, gestiona los anuncios mostrados.</li>
       </ul>
       <p>Ninguno de estos servicios recibe tu nombre real, correo ni contraseña, porque la app nunca los pide.</p>

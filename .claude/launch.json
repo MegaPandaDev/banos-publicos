@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "banos-publicos",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8000"],
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["app.py"],
       "port": 8000
     }
   ]

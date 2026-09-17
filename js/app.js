@@ -1,92 +1,91 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-import {
-  initializeAppCheck,
-  ReCaptchaV3Provider,
-} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app-check.js";
-import {
-  getAuth,
-  signInAnonymously,
-  onAuthStateChanged,
-} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-import {
-  initializeFirestore,
-  getFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-  collection,
-  addDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  onSnapshot,
-  query,
-  where,
-  orderBy,
-  doc,
-  runTransaction,
-  serverTimestamp,
-} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js";
-
-const COLECCION = "banos";
-// UID de Firebase Auth del dispositivo/navegador del moderador. Se obtiene abriendo la
-// app con "?verid" en la URL (una vez, en el dispositivo que uses para moderar) y
-// pegándolo aquí; debe coincidir con el mismo UID que se autoriza en firestore.rules.
-const UID_MODERADOR = "9LTmP4ZlJEcrLfMVLWwDgf8rPw33";
-const UMBRAL_REPORTES = 3;
 const UMBRAL_ESTRELLAS_BUENO = 3;
 const CLAVE_REPORTADOS = "banos_reportados";
 const CENTRO_POR_DEFECTO = [40.4168, -3.7038]; // Madrid, por si no hay geolocalización
 const ZOOM_POR_DEFECTO = 6;
-const RECAPTCHA_SITE_KEY = "6LdCiMAtAAAAAGUqU-yEYCrZQf9OxROu8JKWdqfp";
+const INTERVALO_SONDEO_MS = 30000;
 
-// --- Firebase ---
-const firebaseApp = initializeApp(firebaseConfig);
-
-// App Check: exige que las peticiones a Firestore vengan de esta app real (via
-// reCAPTCHA v3, invisible para la persona) en vez de un script que use estas mismas
-// claves públicas para spamear ubicaciones/valoraciones/comentarios. En localhost no
-// hay dominio válido para reCAPTCHA, así que se usa el token de depuración: la consola
-// del navegador imprimirá uno la primera vez, y hay que darlo de alta en Firebase
-// Console → App Check → "Administrar tokens de depuración".
-if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
-  // Token fijo (no un self.FIREBASE_APPCHECK_DEBUG_TOKEN = true aleatorio) para no
-  // tener que darlo de alta en Firebase Console cada vez que se prueba en local.
-  self.FIREBASE_APPCHECK_DEBUG_TOKEN = "66a73049-edc5-418e-b424-727ebf039299";
-}
-initializeAppCheck(firebaseApp, {
-  provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
-  isTokenAutoRefreshEnabled: true,
-});
-
-const auth = getAuth(firebaseApp);
-
-let db;
-try {
-  db = initializeFirestore(firebaseApp, {
-    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+// --- Peticiones al servidor propio (app.py) ---
+async function peticionJSON(url, opciones = {}) {
+  const resp = await fetch(url, {
+    ...opciones,
+    headers: { "Content-Type": "application/json", ...(opciones.headers || {}) },
   });
-} catch (err) {
-  console.warn("Persistencia offline no disponible:", err);
-  db = getFirestore(firebaseApp);
+  let datos = null;
+  try {
+    datos = await resp.json();
+  } catch {
+    /* respuesta sin cuerpo JSON */
+  }
+  if (!resp.ok) {
+    const error = new Error((datos && datos.error) || "Ha ocurrido un error inesperado.");
+    error.status = resp.status;
+    throw error;
+  }
+  return datos;
 }
 
-let uidActual = null;
-onAuthStateChanged(auth, (user) => {
-  uidActual = user ? user.uid : null;
-  // Vía de acceso oculta para que el moderador recupere el identificador estable de su
-  // propio dispositivo (sin pantalla de login): abrir la app con "?verid" en la URL.
-  if (uidActual && new URLSearchParams(location.search).has("verid")) {
-    window.prompt("Identificador de este dispositivo (cópialo):", uidActual);
-  }
-});
-function esModerador() {
-  return Boolean(UID_MODERADOR) && uidActual === UID_MODERADOR;
+// Vía de acceso oculta para que el moderador recupere el identificador estable de su
+// propio dispositivo (sin pantalla de login): abrir la app con "?verid" en la URL.
+if (new URLSearchParams(location.search).has("verid")) {
+  fetch("/api/verid?verid=1")
+    .then((r) => r.json())
+    .then((datos) => {
+      if (datos.id) window.prompt("Identificador de este dispositivo (cópialo):", datos.id);
+    })
+    .catch(() => {});
 }
-signInAnonymously(auth).catch((err) => {
-  console.error(err);
-  mostrarToast("No se pudo conectar. Revisa tu conexión a internet.", "error");
-});
+
+// --- Verificación humana (Cloudflare Turnstile) ---
+// Opcional de verdad: si el servidor no tiene Turnstile configurado, esto se queda
+// en null y las peticiones se mandan sin token (el servidor decide entonces dejar
+// pasar, ver turnstile.py). Nunca bloquea el uso de la app por sí solo.
+let turnstileSiteKey = null;
+let turnstileWidgetId = null;
+let turnstileCargaPromesa = null;
+let resolverTurnstileActual = null;
+
+fetch("/api/turnstile-site-key")
+  .then((r) => r.json())
+  .then((datos) => {
+    turnstileSiteKey = datos.site_key || null;
+  })
+  .catch(() => {
+    turnstileSiteKey = null;
+  });
+
+function cargarScriptTurnstile() {
+  if (!turnstileCargaPromesa) {
+    turnstileCargaPromesa = new Promise((resolve) => {
+      window.onloadTurnstileCallback = resolve;
+      const script = document.createElement("script");
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    });
+  }
+  return turnstileCargaPromesa;
+}
+
+async function obtenerTokenHumano() {
+  if (!turnstileSiteKey) return null;
+  await cargarScriptTurnstile();
+
+  return new Promise((resolve) => {
+    resolverTurnstileActual = resolve;
+    if (turnstileWidgetId === null) {
+      turnstileWidgetId = turnstile.render("#turnstile-contenedor", {
+        sitekey: turnstileSiteKey,
+        size: "invisible",
+        callback: (token) => resolverTurnstileActual && resolverTurnstileActual(token),
+        "error-callback": () => resolverTurnstileActual && resolverTurnstileActual(null),
+      });
+    } else {
+      turnstile.reset(turnstileWidgetId);
+      turnstile.execute(turnstileWidgetId);
+    }
+  });
+}
 
 // --- Mapa ---
 const map = L.map("map", { zoomControl: false }).setView(CENTRO_POR_DEFECTO, ZOOM_POR_DEFECTO);
@@ -141,9 +140,10 @@ const BotonUbicacion = L.Control.extend({
 });
 map.addControl(new BotonUbicacion());
 
-// --- Marcadores desde Firestore ---
-const marcadores = new Map(); // id documento -> L.Marker
-const datosLavabos = new Map(); // id documento -> datos del documento
+// --- Marcadores desde el servidor ---
+const marcadores = new Map(); // id -> L.Marker
+const datosLavabos = new Map(); // id -> datos básicos (nombre, descripcion, lat, lng)
+let primeraCargaBanos = true;
 
 function escaparHTML(texto) {
   const div = document.createElement("div");
@@ -151,12 +151,9 @@ function escaparHTML(texto) {
   return div.innerHTML;
 }
 
-function formatearFechaRelativa(marcaTiempo) {
-  // marcaTiempo puede venir sin resolver todavía (escritura optimista local
-  // con serverTimestamp() pendiente de confirmar), en cuyo caso no hay fecha.
-  if (!marcaTiempo || typeof marcaTiempo.toDate !== "function") return "justo ahora";
-
-  const segundos = Math.floor((Date.now() - marcaTiempo.toDate().getTime()) / 1000);
+function formatearFechaRelativa(fechaISO) {
+  if (!fechaISO) return "justo ahora";
+  const segundos = Math.floor((Date.now() - new Date(fechaISO).getTime()) / 1000);
   if (segundos < 60) return "justo ahora";
   const minutos = Math.floor(segundos / 60);
   if (minutos < 60) return `hace ${minutos} min`;
@@ -170,45 +167,46 @@ function formatearFechaRelativa(marcaTiempo) {
   return `hace ${años} año${años > 1 ? "s" : ""}`;
 }
 
-const lavabosRef = collection(db, COLECCION);
-const consultaVisibles = query(lavabosRef, where("oculto", "==", false));
-let primerSnapshotBanos = true;
+function quitarMarcador(id) {
+  if (marcadores.has(id)) {
+    map.removeLayer(marcadores.get(id));
+    marcadores.delete(id);
+  }
+  datosLavabos.delete(id);
+  if (idDetalleActual === id) {
+    cerrarDetalle();
+    mostrarToast("Este baño ya no está disponible.", "info");
+  }
+}
 
-onSnapshot(
-  consultaVisibles,
-  (snapshot) => {
-    snapshot.docChanges().forEach((cambio) => {
-      const id = cambio.doc.id;
-
-      if (cambio.type === "removed") {
-        if (marcadores.has(id)) {
-          map.removeLayer(marcadores.get(id));
-          marcadores.delete(id);
-        }
-        datosLavabos.delete(id);
-        if (idDetalleActual === id) {
-          cerrarDetalle();
-          mostrarToast("Este baño ya no está disponible.", "info");
-        }
-        return;
-      }
-
-      const datos = cambio.doc.data();
-      datosLavabos.set(id, datos);
-
-      if (marcadores.has(id)) {
-        map.removeLayer(marcadores.get(id));
-      }
-      const marcador = L.marker([datos.lat, datos.lng], { icon: iconoLavabo }).addTo(map);
-      marcador.on("click", (e) => {
-        L.DomEvent.stop(e);
-        abrirDetalle(id);
-      });
-      marcadores.set(id, marcador);
+function añadirOActualizarMarcador(datos) {
+  const id = String(datos.id);
+  datosLavabos.set(id, datos);
+  if (marcadores.has(id)) {
+    const marcador = marcadores.get(id);
+    const pos = marcador.getLatLng();
+    if (pos.lat !== datos.lat || pos.lng !== datos.lng) marcador.setLatLng([datos.lat, datos.lng]);
+  } else {
+    const marcador = L.marker([datos.lat, datos.lng], { icon: iconoLavabo }).addTo(map);
+    marcador.on("click", (e) => {
+      L.DomEvent.stop(e);
+      abrirDetalle(id);
     });
+    marcadores.set(id, marcador);
+  }
+}
 
-    if (primerSnapshotBanos) {
-      primerSnapshotBanos = false;
+async function cargarBanos() {
+  try {
+    const lista = await peticionJSON("/api/banos");
+    const idsNuevos = new Set(lista.map((b) => String(b.id)));
+    for (const id of Array.from(marcadores.keys())) {
+      if (!idsNuevos.has(id)) quitarMarcador(id);
+    }
+    lista.forEach(añadirOActualizarMarcador);
+
+    if (primeraCargaBanos) {
+      primeraCargaBanos = false;
       if (marcadores.size === 0) {
         mostrarToast(
           "No hay baños registrados por aquí todavía. ¡Sé el primero en añadir uno con el botón +!",
@@ -217,15 +215,16 @@ onSnapshot(
         );
       }
     }
-  },
-  (error) => {
-    console.error(error);
-    mostrarToast(
-      "No se pudieron cargar los baños. Comprueba la configuración de Firebase (js/firebase-config.js).",
-      "error"
-    );
+  } catch (err) {
+    console.error(err);
+    if (primeraCargaBanos) {
+      mostrarToast("No se pudieron cargar los baños. Inténtalo de nuevo más tarde.", "error");
+    }
   }
-);
+}
+
+cargarBanos();
+setInterval(cargarBanos, INTERVALO_SONDEO_MS);
 
 // --- Hoja de detalle: valoraciones y comentarios ---
 const hojaDetalle = document.getElementById("hoja-detalle");
@@ -242,40 +241,28 @@ const listaComentarios = document.getElementById("lista-comentarios");
 const formComentario = document.getElementById("form-comentario");
 
 let idDetalleActual = null;
-let unsubValoraciones = null;
-let unsubComentarios = null;
 
-function abrirDetalle(id) {
-  const datos = datosLavabos.get(id);
-  if (!datos) return;
+async function abrirDetalle(id) {
+  const datosBasicos = datosLavabos.get(id);
+  if (!datosBasicos) return;
 
   cerrarFormulario();
   salirModoAñadir();
   idDetalleActual = id;
-  detalleNombre.textContent = datos.nombre || "Baño público";
-  detalleDescripcion.textContent = datos.descripcion || "Sin instrucciones adicionales.";
-  detalleBtnLlegar.dataset.lat = datos.lat;
-  detalleBtnLlegar.dataset.lng = datos.lng;
-  detalleBtnEditar.hidden = !esModerador();
-  detalleBtnEliminar.hidden = !esModerador();
-
-  cargarValoraciones(id);
-  cargarComentarios(id);
+  detalleNombre.textContent = datosBasicos.nombre || "Baño público";
+  detalleDescripcion.textContent = datosBasicos.descripcion || "Sin instrucciones adicionales.";
+  detalleBtnLlegar.dataset.lat = datosBasicos.lat;
+  detalleBtnLlegar.dataset.lng = datosBasicos.lng;
+  detalleBtnEditar.hidden = true;
+  detalleBtnEliminar.hidden = true;
 
   hojaDetalle.hidden = false;
+  await cargarDetalle(id);
 }
 
 function cerrarDetalle() {
   hojaDetalle.hidden = true;
   idDetalleActual = null;
-  if (unsubValoraciones) {
-    unsubValoraciones();
-    unsubValoraciones = null;
-  }
-  if (unsubComentarios) {
-    unsubComentarios();
-    unsubComentarios = null;
-  }
 }
 
 btnCerrarDetalle.addEventListener("click", cerrarDetalle);
@@ -302,32 +289,37 @@ detalleBtnEliminar.addEventListener("click", async () => {
   const id = idDetalleActual;
   detalleBtnEliminar.disabled = true;
   try {
-    await deleteDoc(doc(db, COLECCION, id));
+    await peticionJSON(`/api/banos/${id}`, { method: "DELETE" });
+    quitarMarcador(id);
     mostrarToast("Baño eliminado.", "success");
     cerrarDetalle();
   } catch (err) {
     console.error(err);
-    mostrarToast("No se pudo eliminar el baño.", "error");
+    mostrarToast(err.message || "No se pudo eliminar el baño.", "error");
   } finally {
     detalleBtnEliminar.disabled = false;
   }
 });
 
-function cargarValoraciones(id) {
-  if (unsubValoraciones) unsubValoraciones();
-  const ref = collection(db, COLECCION, id, "valoraciones");
-  unsubValoraciones = onSnapshot(ref, (snap) => {
-    let suma = 0;
-    let miValor = 0;
-    snap.forEach((d) => {
-      suma += d.data().estrellas;
-      if (d.id === uidActual) miValor = d.data().estrellas;
-    });
-    const total = snap.size;
-    const promedio = total ? suma / total : 0;
-    pintarPromedio(promedio, total);
-    pintarEstrellasUsuario(id, miValor);
-  });
+let ultimosComentarios = [];
+let comentarioEditandoId = null;
+
+async function cargarDetalle(id) {
+  comentarioEditandoId = null;
+  try {
+    const detalle = await peticionJSON(`/api/banos/${id}`);
+    if (idDetalleActual !== id) return; // se cambió de baño mientras cargaba
+
+    detalleBtnEditar.hidden = !detalle.esModerador;
+    detalleBtnEliminar.hidden = !detalle.esModerador;
+    pintarPromedio(detalle.promedio, detalle.totalValoraciones);
+    pintarEstrellasUsuario(id, detalle.miValoracion);
+    ultimosComentarios = detalle.comentarios;
+    renderizarComentarios(id);
+  } catch (err) {
+    console.error(err);
+    mostrarToast(err.message || "No se pudo cargar este baño.", "error");
+  }
 }
 
 function pintarPromedio(promedio, total) {
@@ -385,36 +377,20 @@ function pintarEstrellasUsuario(id, valorActual) {
 }
 
 async function enviarValoracion(id, estrellas) {
-  if (!uidActual) return;
   const botones = detalleEstrellasUsuario.querySelectorAll("button");
   botones.forEach((b) => (b.disabled = true));
   try {
-    await setDoc(doc(db, COLECCION, id, "valoraciones", uidActual), {
-      estrellas,
-      creadoEn: serverTimestamp(),
+    await peticionJSON(`/api/banos/${id}/valoraciones`, {
+      method: "PUT",
+      body: JSON.stringify({ estrellas }),
     });
+    await cargarDetalle(id);
   } catch (err) {
     console.error(err);
-    mostrarToast("No se pudo guardar tu puntuación.", "error");
+    mostrarToast(err.message || "No se pudo guardar tu puntuación.", "error");
+  } finally {
     botones.forEach((b) => (b.disabled = false));
   }
-}
-
-let ultimosComentarios = [];
-let comentarioEditandoId = null;
-
-function cargarComentarios(id) {
-  if (unsubComentarios) unsubComentarios();
-  comentarioEditandoId = null;
-  const ref = query(collection(db, COLECCION, id, "comentarios"), orderBy("creadoEn", "desc"));
-  unsubComentarios = onSnapshot(
-    ref,
-    (snap) => {
-      ultimosComentarios = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      renderizarComentarios(id);
-    },
-    (err) => console.error(err)
-  );
 }
 
 function renderizarComentarios(id) {
@@ -425,7 +401,7 @@ function renderizarComentarios(id) {
 
   listaComentarios.innerHTML = ultimosComentarios
     .map((c) => {
-      if (c.id === comentarioEditandoId) {
+      if (String(c.id) === String(comentarioEditandoId)) {
         return `
           <div class="comentario-editando">
             <textarea class="input-editar-comentario" maxlength="400" rows="2">${escaparHTML(c.texto)}</textarea>
@@ -436,7 +412,6 @@ function renderizarComentarios(id) {
           </div>
         `;
       }
-      const esPropio = c.creadoPor === uidActual;
       return `
         <div class="comentario">
           <div class="comentario-cuerpo">
@@ -444,7 +419,7 @@ function renderizarComentarios(id) {
             <span class="comentario-fecha">${formatearFechaRelativa(c.creadoEn)}</span>
           </div>
           ${
-            esPropio
+            c.esPropio
               ? `<div class="comentario-acciones-propias">
                    <button type="button" class="btn-editar-comentario" data-id="${c.id}">Editar</button>
                    <button type="button" class="btn-borrar-comentario" data-id="${c.id}">Eliminar</button>
@@ -483,12 +458,14 @@ async function guardarEdicionComentario(idBano, idComentario, btnGuardar) {
 
   btnGuardar.disabled = true;
   try {
-    await updateDoc(doc(db, COLECCION, idBano, "comentarios", idComentario), { texto: nuevoTexto });
-    comentarioEditandoId = null;
-    renderizarComentarios(idBano);
+    await peticionJSON(`/api/banos/${idBano}/comentarios/${idComentario}`, {
+      method: "PUT",
+      body: JSON.stringify({ texto: nuevoTexto }),
+    });
+    await cargarDetalle(idBano);
   } catch (err) {
     console.error(err);
-    mostrarToast("No se pudo editar el comentario.", "error");
+    mostrarToast(err.message || "No se pudo editar el comentario.", "error");
     btnGuardar.disabled = false;
   }
 }
@@ -497,10 +474,11 @@ async function borrarComentario(idBano, idComentario) {
   const confirmado = await confirmarAccion("¿Eliminar este comentario?");
   if (!confirmado) return;
   try {
-    await deleteDoc(doc(db, COLECCION, idBano, "comentarios", idComentario));
+    await peticionJSON(`/api/banos/${idBano}/comentarios/${idComentario}`, { method: "DELETE" });
+    await cargarDetalle(idBano);
   } catch (err) {
     console.error(err);
-    mostrarToast("No se pudo eliminar el comentario.", "error");
+    mostrarToast(err.message || "No se pudo eliminar el comentario.", "error");
   }
 }
 
@@ -514,15 +492,16 @@ formComentario.addEventListener("submit", async (e) => {
   const btnEnviar = formComentario.querySelector("button[type=submit]");
   btnEnviar.disabled = true;
   try {
-    await addDoc(collection(db, COLECCION, idDetalleActual, "comentarios"), {
-      texto,
-      creadoEn: serverTimestamp(),
-      creadoPor: uidActual,
+    const turnstile_token = await obtenerTokenHumano();
+    await peticionJSON(`/api/banos/${idDetalleActual}/comentarios`, {
+      method: "POST",
+      body: JSON.stringify({ texto, turnstile_token }),
     });
     formComentario.reset();
+    await cargarDetalle(idDetalleActual);
   } catch (err) {
     console.error(err);
-    mostrarToast("No se pudo publicar el comentario.", "error");
+    mostrarToast(err.message || "No se pudo publicar el comentario.", "error");
   } finally {
     btnEnviar.disabled = false;
   }
@@ -559,29 +538,22 @@ async function reportarLavabo(id) {
 
   detalleBtnReportar.disabled = true;
   try {
-    const ref = doc(db, COLECCION, id);
-    const refReporte = doc(db, COLECCION, id, "reportes", uidActual);
-    await runTransaction(db, async (tx) => {
-      const snap = await tx.get(ref);
-      if (!snap.exists()) return;
-      const reportesActuales = (snap.data().reportes || 0) + 1;
-      tx.set(refReporte, { creadoEn: serverTimestamp() });
-      tx.update(ref, {
-        reportes: reportesActuales,
-        oculto: reportesActuales >= UMBRAL_REPORTES,
-      });
+    const turnstile_token = await obtenerTokenHumano();
+    await peticionJSON(`/api/banos/${id}/reportar`, {
+      method: "POST",
+      body: JSON.stringify({ turnstile_token }),
     });
     marcarComoReportado(id);
-    if (idDetalleActual === id) cerrarDetalle();
+    quitarMarcador(id);
     mostrarToast("Gracias, hemos registrado tu reporte.", "success");
   } catch (err) {
-    if (err.code === "permission-denied") {
+    if (err.status === 409) {
       marcarComoReportado(id);
       mostrarToast("Ya has reportado este baño anteriormente.", "info");
       return;
     }
     console.error(err);
-    mostrarToast("No se pudo enviar el reporte. Inténtalo de nuevo.", "error");
+    mostrarToast(err.message || "No se pudo enviar el reporte. Inténtalo de nuevo.", "error");
   } finally {
     detalleBtnReportar.disabled = false;
   }
@@ -719,25 +691,25 @@ formLavabo.addEventListener("submit", async (e) => {
   btnGuardar.disabled = true;
   try {
     if (modoEdicionId) {
-      await updateDoc(doc(db, COLECCION, modoEdicionId), { nombre, descripcion, lat, lng });
+      await peticionJSON(`/api/banos/${modoEdicionId}`, {
+        method: "PUT",
+        body: JSON.stringify({ nombre, descripcion, lat, lng }),
+      });
+      añadirOActualizarMarcador({ id: modoEdicionId, nombre, descripcion, lat, lng });
       mostrarToast("Baño actualizado.", "success");
     } else {
-      await addDoc(collection(db, COLECCION), {
-        nombre,
-        descripcion,
-        lat,
-        lng,
-        reportes: 0,
-        oculto: false,
-        creadoEn: serverTimestamp(),
-        creadoPor: uidActual,
+      const turnstile_token = await obtenerTokenHumano();
+      const resultado = await peticionJSON("/api/banos", {
+        method: "POST",
+        body: JSON.stringify({ nombre, descripcion, lat, lng, turnstile_token }),
       });
+      añadirOActualizarMarcador({ id: resultado.id, nombre, descripcion, lat, lng });
       mostrarToast("¡Gracias! El baño se ha añadido al mapa.", "success");
     }
     cerrarFormulario();
   } catch (err) {
     console.error(err);
-    mostrarToast("No se pudo guardar. Comprueba tu conexión e inténtalo de nuevo.", "error");
+    mostrarToast(err.message || "No se pudo guardar. Comprueba tu conexión e inténtalo de nuevo.", "error");
   } finally {
     btnGuardar.disabled = false;
   }

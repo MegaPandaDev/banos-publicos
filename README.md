@@ -5,79 +5,90 @@ App web (PWA) para encontrar lavabos públicos en un mapa. Cualquier usuario pue
 - Ver los baños cercanos en un mapa (OpenStreetMap).
 - Tocar un icono para ver instrucciones de acceso y pedir "Cómo llegar" (abre Google Maps).
 - Añadir un baño nuevo tocando el mapa o usando su ubicación actual.
+- Valorar y comentar cada baño.
 - Reportar un baño como falso/inexistente; si varias personas lo reportan, se oculta automáticamente.
 
-No necesita cuentas de usuario ni contraseñas: cada persona se identifica de forma anónima y automática.
+No necesita cuentas de usuario ni contraseñas: cada persona se identifica de forma anónima y automática (una cookie técnica, sin datos personales).
 
 ## ¿Qué es una PWA?
 
 Es una página web normal que, además, se puede "instalar" en el móvil (icono en la pantalla de inicio, se abre a pantalla completa como una app) sin pasar por la App Store ni Google Play. Se actualiza sola cada vez que la abres.
 
+## Arquitectura
+
+- **Servidor**: Python (Flask), en [`app.py`](app.py). Sirve la web y expone la API (`/api/...`) que crea/edita/borra baños, valoraciones y comentarios.
+- **Base de datos**: [Neon](https://neon.tech) (Postgres), esquema en [`schema.sql`](schema.sql).
+- **Antibots**: [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) (opcional: si no se configura, la app funciona igual, solo que sin esa comprobación — ver [`turnstile.py`](turnstile.py)).
+- **Hosting**: [Render](https://render.com), como *Web Service* (no *Static Site*, porque ahora hay un servidor de verdad).
+
 ## Requisitos
 
-- Un navegador moderno (Chrome, Edge, Safari...).
-- Una cuenta de Google gratuita para crear el proyecto de Firebase (la base de datos).
-- **No hace falta instalar Node.js** para usar o publicar esta app tal cual está.
+- Python 3.11+ instalado.
+- Una cuenta gratuita en [neon.tech](https://neon.tech) (base de datos).
+- Opcional: una cuenta gratuita en [Cloudflare](https://dash.cloudflare.com) para Turnstile.
 
-## 1. Crear el proyecto de Firebase (la base de datos)
+## 1. Crear la base de datos en Neon
 
-1. Ve a [https://console.firebase.google.com](https://console.firebase.google.com) e inicia sesión con tu cuenta de Google.
-2. Pulsa **"Agregar proyecto"**, dale un nombre (p. ej. `banos-publicos`) y créalo (puedes desactivar Google Analytics, no hace falta).
-3. Dentro del proyecto, en el menú lateral entra en **Compilación > Firestore Database** y pulsa **"Crear base de datos"**. Elige una ubicación (p. ej. `eur3 (europe-west)`) y modo **producción**.
-4. Ve a la pestaña **Reglas** de Firestore, borra el contenido y pega el de este proyecto: [`firestore.rules`](firestore.rules). Pulsa **Publicar**.
-5. En el menú lateral entra en **Compilación > Authentication**, pulsa **"Comenzar"**, y en la pestaña **Sign-in method** activa el proveedor **Anónimo**.
-6. Vuelve a la página principal del proyecto (icono de casa), pulsa el icono **`</>`** ("Agregar app" > Web), dale un apodo y pulsa **"Registrar app"**. Firebase te mostrará un bloque `firebaseConfig` con varias claves.
+1. Ve a [neon.tech](https://neon.tech), crea una cuenta y un proyecto nuevo.
+2. Copia la **cadena de conexión** ("Connection string") que te da el panel.
+3. Copia [`.env.example`](.env.example) a un archivo nuevo llamado `.env` (no se sube al repositorio) y pega ahí tu cadena en `DATABASE_URL`.
+4. Aplica el esquema una vez:
 
-## 2. Configurar la app con tus claves
+   ```bash
+   python -c "from dotenv import load_dotenv; load_dotenv(); import os, psycopg; con = psycopg.connect(os.environ['DATABASE_URL']); con.cursor().execute(open('schema.sql', encoding='utf-8').read()); con.commit()"
+   ```
 
-Abre [`js/firebase-config.js`](js/firebase-config.js) y sustituye los valores de ejemplo por los que te dio Firebase en el paso anterior:
-
-```js
-export const firebaseConfig = {
-  apiKey: "...",
-  authDomain: "...",
-  projectId: "...",
-  storageBucket: "...",
-  messagingSenderId: "...",
-  appId: "...",
-};
-```
-
-Guarda el archivo.
-
-## 3. Probar la app en tu ordenador
-
-Los navegadores no dejan abrir `index.html` haciendo doble clic (bloquean los módulos y el modo offline). Hace falta un pequeño servidor local. Como tienes Python instalado, basta con:
+## 2. Instalar dependencias y probar en local
 
 ```bash
-python -m http.server 8000
+pip install -r requirements.txt
+python app.py
 ```
 
-Ejecútalo dentro de la carpeta del proyecto y abre <http://localhost:8000> en el navegador. Concede permiso de ubicación cuando te lo pida para centrar el mapa.
+Abre <http://localhost:8000>. Concede permiso de ubicación cuando te lo pida para centrar el mapa.
 
-## 4. Publicarla gratis en internet
+## 3. Publicarla en Render
 
-### Opción recomendada: GitHub Pages (no necesita Node.js)
+1. Sube el proyecto a un repositorio de GitHub.
+2. En [Render](https://dashboard.render.com), **New > Web Service**, conecta el repositorio.
+3. Configuración:
+   - **Runtime**: Python
+   - **Build command**: `pip install -r requirements.txt`
+   - **Start command**: `gunicorn app:app`
+4. En la pestaña **Environment**, añade las variables:
+   - `DATABASE_URL`: tu cadena de conexión de Neon.
+   - `MODERADOR_ID`: déjala vacía por ahora (ver más abajo cómo obtenerla).
+   - `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY`: opcional, si activas Cloudflare Turnstile.
+5. Despliega. Las cabeceras de seguridad (CSP, etc.) ya están en el propio código (`app.py`), no hace falta configurarlas en Render.
 
-1. Sube esta carpeta a un repositorio de GitHub (puedes usar `git init`, `git add`, `git commit` y crear el repo en GitHub).
-2. En GitHub, entra en **Settings > Pages**, y en "Build and deployment" elige rama `main` y carpeta `/ (root)`.
-3. En unos minutos tu app estará disponible en `https://tu-usuario.github.io/tu-repositorio/`.
+## 4. Ser moderador (editar/eliminar cualquier baño)
 
-### Alternativa: Firebase Hosting
+No hay pantalla de login: en su lugar, cada dispositivo tiene un identificador anónimo estable (una cookie).
 
-Requiere instalar Node.js y Firebase CLI (`npm install -g firebase-tools`, `firebase login`, `firebase init hosting`, `firebase deploy`). Es una buena opción si más adelante quieres añadir funciones de servidor.
+1. Visita la web ya desplegada añadiendo `?verid` a la URL, por ejemplo `https://tu-app.onrender.com/?verid`.
+2. Aparecerá un cuadro con tu identificador. Cópialo.
+3. En Render, pon ese valor en la variable de entorno `MODERADOR_ID` y vuelve a desplegar.
+
+A partir de ahí, en ese mismo dispositivo/navegador verás botones de "Editar" y "Eliminar" en cualquier baño.
 
 ## 5. Instalar la app en el móvil
 
 - **Android (Chrome)**: abre la URL de la app, pulsa el menú (⋮) y elige **"Añadir a pantalla de inicio"**.
 - **iPhone (Safari)**: abre la URL, pulsa el icono de compartir (□↑) y elige **"Añadir a pantalla de inicio"**.
 
-## Cómo funciona la moderación
+## Cómo funciona la moderación automática
 
-- Cada baño nuevo se guarda con `reportes: 0` y `oculto: false`.
-- Cuando alguien pulsa "Reportar", se suma 1 al contador `reportes` (cada dispositivo solo puede reportar un mismo baño una vez, se recuerda en el propio móvil).
-- Al llegar a **3 reportes**, el baño pasa a `oculto: true` y desaparece del mapa de todos los usuarios automáticamente. Puedes cambiar este número editando `UMBRAL_REPORTES` en [`js/app.js`](js/app.js).
-- Los datos nunca se borran: si en el futuro quieres revisar o restaurar baños ocultos, puedes hacerlo manualmente desde la consola de Firebase (Firestore Database > colección `banos`).
+- Cada baño nuevo se guarda con `reportes = 0` y `oculto = false`.
+- Cuando alguien pulsa "Reportar", se suma 1 al contador (cada visitante solo puede reportar un mismo baño una vez).
+- Al llegar a **3 reportes**, el baño pasa a `oculto = true` y desaparece del mapa de todos los usuarios automáticamente. Puedes cambiar este número editando `UMBRAL_REPORTES` en [`app.py`](app.py).
+- Los datos nunca se borran solos: si quieres revisar baños ocultos, puedes consultarlos directamente en Neon (tabla `banos`, columna `oculto`).
+
+## Protección antibots (Cloudflare Turnstile)
+
+Es opcional y "falla abierta": si no configuras `TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY`, la app funciona exactamente igual, sin ninguna comprobación. Para activarla:
+
+1. Crea un sitio en [Cloudflare Turnstile](https://dash.cloudflare.com) (modo "Invisible") para tu dominio.
+2. Pon la clave de sitio y la clave secreta en las variables de entorno correspondientes.
 
 ## Ideas para el futuro (no incluidas todavía)
 

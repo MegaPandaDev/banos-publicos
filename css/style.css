@@ -332,6 +332,7 @@ textarea {
 .detalle-promedio {
   display: inline-flex;
   align-items: center;
+  gap: 0.45rem;
   margin: 0 0 0.9rem;
   font-family: var(--fuente-display);
   font-size: 1.05rem;
@@ -348,6 +349,23 @@ textarea {
 
 .detalle-promedio.promedio-malo {
   background: color-mix(in srgb, #92400e 14%, var(--color-superficie-sutil));
+}
+
+.iconos-valoracion {
+  display: inline-flex;
+  align-items: center;
+}
+
+.icono-valoracion {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.icono-parcial {
+  display: inline-block;
+  overflow: hidden;
+  width: var(--relleno);
+  vertical-align: bottom;
 }
 
 .estrellas-usuario {

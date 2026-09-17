@@ -26,7 +26,7 @@ import { firebaseConfig } from "./firebase-config.js";
 
 const COLECCION = "banos";
 const UMBRAL_REPORTES = 3;
-const UMBRAL_ESTRELLAS_BUENO = 4;
+const UMBRAL_ESTRELLAS_BUENO = 3;
 const CLAVE_REPORTADOS = "banos_reportados";
 const CENTRO_POR_DEFECTO = [40.4168, -3.7038]; // Madrid, por si no hay geolocalización
 const ZOOM_POR_DEFECTO = 6;
@@ -255,11 +255,29 @@ function pintarPromedio(promedio, total) {
     detallePromedio.classList.remove("promedio-bueno", "promedio-malo");
     return;
   }
-  const redondeado = Math.round(promedio);
-  const estrellas = "★".repeat(redondeado) + "☆".repeat(5 - redondeado);
-  const esBueno = promedio >= UMBRAL_ESTRELLAS_BUENO;
+
+  // Redondeado a 1 decimal para evitar arrastrar errores de coma flotante
+  // (p.ej. 12/5 = 2.4000000000000004) al calcular cuántos iconos enteros mostrar.
+  const valor = Math.round(promedio * 10) / 10;
+  const esBueno = valor > UMBRAL_ESTRELLAS_BUENO;
   const emoji = esBueno ? "🌸" : "💩";
-  detallePromedio.textContent = `${estrellas} ${promedio.toFixed(1)} (${total}) ${emoji}`;
+
+  const enteros = Math.floor(valor);
+  const fraccion = valor - enteros;
+
+  let iconosHTML = "";
+  for (let i = 0; i < enteros; i++) {
+    iconosHTML += `<span class="icono-valoracion">${emoji}</span>`;
+  }
+  if (fraccion > 0.05) {
+    const relleno = Math.round(fraccion * 100);
+    iconosHTML += `<span class="icono-parcial" style="--relleno:${relleno}%"><span class="icono-valoracion">${emoji}</span></span>`;
+  }
+
+  detallePromedio.innerHTML = `
+    <span class="iconos-valoracion">${iconosHTML}</span>
+    <span>${valor.toFixed(1)} (${total})</span>
+  `;
   detallePromedio.classList.toggle("promedio-bueno", esBueno);
   detallePromedio.classList.toggle("promedio-malo", !esBueno);
 }

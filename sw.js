@@ -1,4 +1,4 @@
-const CACHE_NAME = "banos-publicos-v24";
+const CACHE_NAME = "banos-publicos-v25";
 const APP_SHELL = [
   "./",
   "./css/style.css",

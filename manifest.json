@@ -2,7 +2,7 @@
   "name": "Meaquí",
   "short_name": "Meaquí",
   "description": "Encuentra y comparte lavabos públicos cerca de ti",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0d9488",

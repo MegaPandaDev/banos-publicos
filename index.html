@@ -40,6 +40,9 @@
         <img src="icons/wc.svg" class="icono-marca" alt="" />
         Meaquí <span class="marca-autor">by MegaPandaDev</span>
       </h1>
+      <button type="button" id="btn-moderacion" class="btn-moderacion" hidden>
+        Moderación<span id="contador-moderacion" class="contador-moderacion" hidden>0</span>
+      </button>
       <a
         class="enlace-donacion"
         href="https://buymeacoffee.com/megapandadev"
@@ -140,6 +143,24 @@
       </div>
     </div>
 
+    <div id="hoja-moderacion" class="hoja" hidden>
+      <button type="button" id="btn-cerrar-moderacion" class="btn-cerrar" aria-label="Cerrar">
+        <img src="icons/cruz.svg" class="icono-cerrar" alt="" />
+      </button>
+
+      <h2>Panel de moderación</h2>
+
+      <div class="detalle-seccion">
+        <p class="detalle-subtitulo">Baños reportados</p>
+        <div id="lista-moderacion-reportados" class="lista-moderacion"></div>
+      </div>
+
+      <div class="detalle-seccion">
+        <p class="detalle-subtitulo">Últimos baños añadidos</p>
+        <div id="lista-moderacion-nuevos" class="lista-moderacion"></div>
+      </div>
+    </div>
+
     <div id="espacio-anuncio" class="espacio-anuncio" hidden></div>
 
     <div id="toast" class="toast"></div>
@@ -157,6 +178,19 @@
           <button type="button" id="modal-btn-confirmar" class="btn-peligro">Confirmar</button>
         </div>
       </div>
+    </div>
+
+    <div id="hoja-motivo-reporte" class="hoja" hidden>
+      <h2>¿Por qué reportas este baño?</h2>
+      <div class="motivos-reporte">
+        <button type="button" class="btn-secundario" data-motivo="no_existe">Ya no existe</button>
+        <button type="button" class="btn-secundario" data-motivo="cerrado">Está cerrado</button>
+        <button type="button" class="btn-secundario" data-motivo="informacion_incorrecta">
+          Información incorrecta
+        </button>
+        <button type="button" class="btn-secundario" data-motivo="otro">Otro motivo</button>
+      </div>
+      <button type="button" id="btn-cancelar-motivo" class="btn-secundario">Cancelar</button>
     </div>
 
     <div id="turnstile-contenedor"></div>

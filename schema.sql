@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS banos (
 CREATE TABLE IF NOT EXISTS reportes (
     bano_id INTEGER NOT NULL REFERENCES banos(id) ON DELETE CASCADE,
     visitante_id TEXT NOT NULL,
+    motivo TEXT,
     creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (bano_id, visitante_id)
 );

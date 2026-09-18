@@ -16,6 +16,7 @@ MODERADOR_ID = os.environ.get("MODERADOR_ID", "")
 UMBRAL_REPORTES = 3
 COOKIE_VISITANTE = "visitante_id"
 MENSAJE_ROBOT = "No se ha podido verificar que no eres un robot. Recarga la página e inténtalo de nuevo."
+MOTIVOS_REPORTE = {"no_existe", "cerrado", "informacion_incorrecta", "otro"}
 
 # Identificadores "del sistema" (tú o yo) de antes de que existiera MODERADOR_ID:
 # el UID de Firebase del moderador previo a la migración, y la sesión usada para
@@ -120,6 +121,11 @@ def api_verid():
 @app.route("/api/turnstile-site-key")
 def api_turnstile_site_key():
     return jsonify({"site_key": turnstile.clave_sitio()})
+
+
+@app.route("/api/yo")
+def api_yo():
+    return jsonify({"esModerador": es_moderador(g.visitante_id)})
 
 
 # --- Baños ---
@@ -252,6 +258,10 @@ def eliminar_bano(bano_id):
 @app.route("/api/banos/<int:bano_id>/reportar", methods=["POST"])
 def reportar(bano_id):
     cuerpo = request.get_json(force=True, silent=True) or {}
+    motivo = cuerpo.get("motivo")
+    if motivo not in MOTIVOS_REPORTE:
+        return jsonify({"error": "Indica un motivo válido para el reporte."}), 400
+
     if not turnstile.token_valido(cuerpo.get("turnstile_token"), request.remote_addr):
         return jsonify({"error": MENSAJE_ROBOT}), 400
 
@@ -263,8 +273,8 @@ def reportar(bano_id):
 
         try:
             cur.execute(
-                "INSERT INTO reportes (bano_id, visitante_id) VALUES (%s, %s)",
-                (bano_id, g.visitante_id),
+                "INSERT INTO reportes (bano_id, visitante_id, motivo) VALUES (%s, %s, %s)",
+                (bano_id, g.visitante_id, motivo),
             )
         except psycopg.errors.UniqueViolation:
             con.rollback()
@@ -277,6 +287,65 @@ def reportar(bano_id):
         )
         con.commit()
     return jsonify({"ok": True})
+
+
+@app.route("/api/moderacion")
+def moderacion():
+    if not es_moderador(g.visitante_id):
+        return jsonify({"error": "No autorizado."}), 403
+
+    with conectar() as con, con.cursor() as cur:
+        cur.execute(
+            """SELECT id, nombre, descripcion, lat, lng, creado_en, creado_por
+               FROM banos ORDER BY creado_en DESC LIMIT 30"""
+        )
+        nuevos = cur.fetchall()
+
+        cur.execute(
+            """SELECT id, nombre, lat, lng, reportes, oculto
+               FROM banos WHERE reportes > 0 ORDER BY reportes DESC, id DESC"""
+        )
+        reportados = cur.fetchall()
+
+        motivos_por_bano = {}
+        ids_reportados = [b["id"] for b in reportados]
+        if ids_reportados:
+            cur.execute(
+                """SELECT bano_id, motivo FROM reportes
+                   WHERE bano_id = ANY(%s) ORDER BY creado_en DESC""",
+                (ids_reportados,),
+            )
+            for fila in cur.fetchall():
+                motivos_por_bano.setdefault(fila["bano_id"], []).append(fila["motivo"])
+
+    return jsonify(
+        {
+            "nuevos": [
+                {
+                    "id": b["id"],
+                    "nombre": b["nombre"],
+                    "descripcion": b["descripcion"],
+                    "lat": b["lat"],
+                    "lng": b["lng"],
+                    "creadoEn": b["creado_en"].isoformat(),
+                    "esSistema": es_sistema(b["creado_por"]),
+                }
+                for b in nuevos
+            ],
+            "reportados": [
+                {
+                    "id": b["id"],
+                    "nombre": b["nombre"],
+                    "lat": b["lat"],
+                    "lng": b["lng"],
+                    "reportes": b["reportes"],
+                    "oculto": b["oculto"],
+                    "motivos": motivos_por_bano.get(b["id"], []),
+                }
+                for b in reportados
+            ],
+        }
+    )
 
 
 # --- Valoraciones ---

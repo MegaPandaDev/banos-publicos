@@ -284,16 +284,21 @@ const formComentario = document.getElementById("form-comentario");
 let idDetalleActual = null;
 
 async function abrirDetalle(id) {
-  const datosBasicos = datosLavabos.get(id);
-  if (!datosBasicos) return;
-
   cerrarFormulario();
   salirModoAñadir();
+  cerrarModeracion();
   idDetalleActual = id;
-  detalleNombre.textContent = datosBasicos.nombre || "Baño público";
-  detalleDescripcion.textContent = datosBasicos.descripcion || "Sin instrucciones adicionales.";
-  detalleBtnLlegar.dataset.lat = datosBasicos.lat;
-  detalleBtnLlegar.dataset.lng = datosBasicos.lng;
+
+  // Si ya lo teníamos cargado (está visible en el mapa), lo mostramos al
+  // instante; si no (p. ej. un baño oculto abierto desde el panel de
+  // moderación), cargarDetalle() rellena estos mismos campos igualmente.
+  const datosBasicos = datosLavabos.get(id);
+  detalleNombre.textContent = datosBasicos ? datosBasicos.nombre || "Baño público" : "";
+  detalleDescripcion.textContent = datosBasicos ? datosBasicos.descripcion || "Sin instrucciones adicionales." : "";
+  if (datosBasicos) {
+    detalleBtnLlegar.dataset.lat = datosBasicos.lat;
+    detalleBtnLlegar.dataset.lng = datosBasicos.lng;
+  }
   detalleBtnEditar.hidden = true;
   detalleBtnEliminar.hidden = true;
 
@@ -344,6 +349,7 @@ detalleBtnEliminar.addEventListener("click", async () => {
 
 let ultimosComentarios = [];
 let comentarioEditandoId = null;
+let ultimoDetalleCargado = null; // respaldo para editar baños ocultos (no están en datosLavabos)
 
 async function cargarDetalle(id) {
   comentarioEditandoId = null;
@@ -351,6 +357,11 @@ async function cargarDetalle(id) {
     const detalle = await peticionJSON(`/api/banos/${id}`);
     if (idDetalleActual !== id) return; // se cambió de baño mientras cargaba
 
+    ultimoDetalleCargado = detalle;
+    detalleNombre.textContent = detalle.nombre || "Baño público";
+    detalleDescripcion.textContent = detalle.descripcion || "Sin instrucciones adicionales.";
+    detalleBtnLlegar.dataset.lat = detalle.lat;
+    detalleBtnLlegar.dataset.lng = detalle.lng;
     detalleBtnEditar.hidden = !detalle.esModerador;
     detalleBtnEliminar.hidden = !detalle.esModerador;
     pintarPromedio(detalle.promedio, detalle.totalValoraciones);
@@ -567,22 +578,40 @@ function marcarComoReportado(id) {
   localStorage.setItem(CLAVE_REPORTADOS, JSON.stringify(lista));
 }
 
+const hojaMotivoReporte = document.getElementById("hoja-motivo-reporte");
+const btnCancelarMotivo = document.getElementById("btn-cancelar-motivo");
+
+function elegirMotivoReporte() {
+  return new Promise((resolve) => {
+    hojaMotivoReporte.hidden = false;
+    const botones = hojaMotivoReporte.querySelectorAll("[data-motivo]");
+    const limpiar = (motivo) => {
+      hojaMotivoReporte.hidden = true;
+      botones.forEach((b) => b.removeEventListener("click", onClick));
+      btnCancelarMotivo.removeEventListener("click", onCancelar);
+      resolve(motivo);
+    };
+    const onClick = (e) => limpiar(e.currentTarget.dataset.motivo);
+    const onCancelar = () => limpiar(null);
+    botones.forEach((b) => b.addEventListener("click", onClick));
+    btnCancelarMotivo.addEventListener("click", onCancelar);
+  });
+}
+
 async function reportarLavabo(id) {
   if (yaReportado(id)) {
     mostrarToast("Ya has reportado este baño anteriormente.", "info");
     return;
   }
-  const confirmado = await confirmarAccion(
-    "¿Seguro que quieres reportar este baño como falso, inexistente o inaccesible?"
-  );
-  if (!confirmado) return;
+  const motivo = await elegirMotivoReporte();
+  if (!motivo) return;
 
   detalleBtnReportar.disabled = true;
   try {
     const turnstile_token = await obtenerTokenHumano();
     await peticionJSON(`/api/banos/${id}/reportar`, {
       method: "POST",
-      body: JSON.stringify({ turnstile_token }),
+      body: JSON.stringify({ motivo, turnstile_token }),
     });
     marcarComoReportado(id);
     quitarMarcador(id);
@@ -598,6 +627,107 @@ async function reportarLavabo(id) {
   } finally {
     detalleBtnReportar.disabled = false;
   }
+}
+
+// --- Panel de moderación (solo visible para el moderador) ---
+const MOTIVOS_REPORTE_TEXTO = {
+  no_existe: "Ya no existe",
+  cerrado: "Está cerrado",
+  informacion_incorrecta: "Información incorrecta",
+  otro: "Otro motivo",
+};
+
+const btnModeracion = document.getElementById("btn-moderacion");
+const contadorModeracion = document.getElementById("contador-moderacion");
+const hojaModeracion = document.getElementById("hoja-moderacion");
+const btnCerrarModeracion = document.getElementById("btn-cerrar-moderacion");
+const listaModeracionReportados = document.getElementById("lista-moderacion-reportados");
+const listaModeracionNuevos = document.getElementById("lista-moderacion-nuevos");
+
+fetch("/api/yo")
+  .then((r) => r.json())
+  .then((datos) => {
+    if (!datos.esModerador) return;
+    btnModeracion.hidden = false;
+    actualizarContadorModeracion();
+    setInterval(actualizarContadorModeracion, INTERVALO_SONDEO_MS);
+  })
+  .catch(() => {});
+
+async function actualizarContadorModeracion() {
+  try {
+    const datos = await peticionJSON("/api/moderacion");
+    const pendientes = datos.reportados.length;
+    contadorModeracion.textContent = String(pendientes);
+    contadorModeracion.hidden = pendientes === 0;
+  } catch {
+    /* si falla, simplemente no se actualiza el contador */
+  }
+}
+
+function cerrarModeracion() {
+  hojaModeracion.hidden = true;
+}
+
+btnCerrarModeracion.addEventListener("click", cerrarModeracion);
+
+btnModeracion.addEventListener("click", async () => {
+  cerrarDetalle();
+  cerrarFormulario();
+  hojaModeracion.hidden = false;
+  listaModeracionReportados.innerHTML = "";
+  listaModeracionNuevos.innerHTML = "";
+  try {
+    const datos = await peticionJSON("/api/moderacion");
+    renderizarModeracion(datos);
+  } catch (err) {
+    console.error(err);
+    mostrarToast(err.message || "No se pudo cargar el panel de moderación.", "error");
+  }
+});
+
+function irAModeracionItem(id, lat, lng) {
+  cerrarModeracion();
+  map.panTo([lat, lng]);
+  abrirDetalle(id);
+}
+
+function renderizarModeracion(datos) {
+  contadorModeracion.textContent = String(datos.reportados.length);
+  contadorModeracion.hidden = datos.reportados.length === 0;
+
+  listaModeracionReportados.innerHTML = datos.reportados.length
+    ? datos.reportados
+        .map(
+          (b) => `
+      <button type="button" class="item-moderacion ${b.oculto ? "item-oculto" : ""}" data-id="${b.id}">
+        <strong>${escaparHTML(b.nombre)}</strong>
+        <span>${b.reportes} reporte${b.reportes === 1 ? "" : "s"}${b.oculto ? " · oculto del mapa" : ""}</span>
+        <span>${b.motivos.map((m) => MOTIVOS_REPORTE_TEXTO[m] || m).join(", ")}</span>
+      </button>
+    `
+        )
+        .join("")
+    : `<p class="sin-comentarios">No hay baños reportados.</p>`;
+
+  listaModeracionNuevos.innerHTML = datos.nuevos.length
+    ? datos.nuevos
+        .map(
+          (b) => `
+      <button type="button" class="item-moderacion" data-id="${b.id}">
+        <strong>${escaparHTML(b.nombre)}</strong>
+        <span>${formatearFechaRelativa(b.creadoEn)} · ${b.esSistema ? "puesto por el sistema" : "puesto por un usuario"}</span>
+      </button>
+    `
+        )
+        .join("")
+    : `<p class="sin-comentarios">No hay baños nuevos todavía.</p>`;
+
+  const filas = [...datos.reportados, ...datos.nuevos];
+  hojaModeracion.querySelectorAll(".item-moderacion").forEach((el) => {
+    const fila = filas.find((f) => String(f.id) === el.dataset.id);
+    if (fila) el.addEventListener("click", () => irAModeracionItem(fila.id, fila.lat, fila.lng));
+  });
 }
 
 // --- Añadir un baño nuevo ---
@@ -674,7 +804,7 @@ function abrirFormulario(latlng) {
 }
 
 function abrirFormularioEdicion(id) {
-  const datos = datosLavabos.get(id);
+  const datos = datosLavabos.get(id) || (ultimoDetalleCargado && String(ultimoDetalleCargado.id) === id ? ultimoDetalleCargado : null);
   if (!datos) return;
 
   cerrarDetalle();

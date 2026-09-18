@@ -40,9 +40,11 @@
         <img src="icons/wc.svg" class="icono-marca" alt="" />
         Meaquí <span class="marca-autor">by MegaPandaDev</span>
       </h1>
-      <button type="button" id="btn-moderacion" class="btn-moderacion" hidden>
+      {% if es_moderador %}
+      <button type="button" id="btn-moderacion" class="btn-moderacion">
         Moderación<span id="contador-moderacion" class="contador-moderacion" hidden>0</span>
       </button>
+      {% endif %}
       <a
         class="enlace-donacion"
         href="https://buymeacoffee.com/megapandadev"
@@ -143,6 +145,7 @@
       </div>
     </div>
 
+    {% if es_moderador %}
     <div id="hoja-moderacion" class="hoja" hidden>
       <button type="button" id="btn-cerrar-moderacion" class="btn-cerrar" aria-label="Cerrar">
         <img src="icons/cruz.svg" class="icono-cerrar" alt="" />
@@ -151,7 +154,10 @@
       <h2>Panel de moderación</h2>
 
       <div class="detalle-seccion">
-        <p class="detalle-subtitulo">Baños reportados</p>
+        <div class="moderacion-seccion-titulo">
+          <p class="detalle-subtitulo">Baños reportados</p>
+          <a href="/api/moderacion/exportar" class="enlace-exportar">Exportar CSV</a>
+        </div>
         <div id="lista-moderacion-reportados" class="lista-moderacion"></div>
       </div>
 
@@ -160,6 +166,7 @@
         <div id="lista-moderacion-nuevos" class="lista-moderacion"></div>
       </div>
     </div>
+    {% endif %}
 
     <div id="espacio-anuncio" class="espacio-anuncio" hidden></div>
 
@@ -216,5 +223,8 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script type="module" src="js/app.js"></script>
+    {% if es_moderador %}
+    <script type="module" src="js/moderacion.js"></script>
+    {% endif %}
   </body>
 </html>

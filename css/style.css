@@ -611,6 +611,24 @@ textarea {
   color: var(--color-peligro);
 }
 
+.moderacion-seccion-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.moderacion-seccion-titulo .detalle-subtitulo {
+  margin: 0;
+}
+
+.enlace-exportar {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-primario-oscuro);
+  text-decoration: none;
+}
+
 /* Selector de motivo al reportar */
 .motivos-reporte {
   display: flex;

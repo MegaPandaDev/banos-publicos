@@ -1,3 +1,5 @@
+import csv
+import io
 import os
 import secrets
 
@@ -5,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from flask import Flask, g, jsonify, request
+from flask import Flask, Response, g, jsonify, render_template, request
 import psycopg
 from psycopg.rows import dict_row
 
@@ -86,6 +88,16 @@ def validar_lavabo(datos: dict):
     if not isinstance(lng, (int, float)) or isinstance(lng, bool) or not (-180 <= lng <= 180):
         return None, "La longitud no es válida."
     return {"nombre": nombre, "descripcion": descripcion, "lat": lat, "lng": lng}, None
+
+
+@app.before_request
+def bloquear_plantillas():
+    # La carpeta templates/ solo debe servirse ya renderizada (ver index()).
+    # Como static_folder cubre toda la raíz del proyecto, Flask registra su
+    # propia ruta estática que serviría estos archivos tal cual si no se
+    # bloquean aquí, antes de que se decida ninguna otra ruta.
+    if request.path == "/templates" or request.path.startswith("/templates/"):
+        return jsonify({"error": "No encontrado."}), 404
 
 
 @app.before_request
@@ -351,6 +363,58 @@ def moderacion():
     )
 
 
+@app.route("/api/moderacion/exportar")
+def exportar_moderacion():
+    if not es_moderador(g.visitante_id):
+        return jsonify({"error": "No autorizado."}), 403
+
+    with conectar() as con, con.cursor() as cur:
+        cur.execute(
+            """SELECT id, nombre, descripcion, lat, lng, reportes, oculto, creado_en
+               FROM banos WHERE reportes > 0 ORDER BY reportes DESC, id DESC"""
+        )
+        banos = cur.fetchall()
+
+        reportes_por_bano = {}
+        ids = [b["id"] for b in banos]
+        if ids:
+            cur.execute(
+                """SELECT bano_id, motivo, comentario FROM reportes
+                   WHERE bano_id = ANY(%s) ORDER BY creado_en DESC""",
+                (ids,),
+            )
+            for fila in cur.fetchall():
+                reportes_por_bano.setdefault(fila["bano_id"], []).append(fila)
+
+    salida = io.StringIO()
+    escritor = csv.writer(salida)
+    escritor.writerow(
+        ["id", "nombre", "descripcion", "lat", "lng", "reportes", "oculto", "creado_en", "detalle_reportes"]
+    )
+    for b in banos:
+        detalle = "; ".join(
+            (r["motivo"] or "sin_motivo") + (f' ({r["comentario"]})' if r["comentario"] else "")
+            for r in reportes_por_bano.get(b["id"], [])
+        )
+        escritor.writerow(
+            [
+                b["id"],
+                b["nombre"],
+                b["descripcion"],
+                b["lat"],
+                b["lng"],
+                b["reportes"],
+                b["oculto"],
+                b["creado_en"].isoformat(),
+                detalle,
+            ]
+        )
+
+    resp = Response(salida.getvalue(), mimetype="text/csv")
+    resp.headers["Content-Disposition"] = "attachment; filename=banos_reportados.csv"
+    return resp
+
+
 # --- Valoraciones ---
 @app.route("/api/banos/<int:bano_id>/valoraciones", methods=["PUT"])
 def valorar(bano_id):
@@ -431,7 +495,7 @@ def borrar_comentario(bano_id, comentario_id):
 # --- Estáticos (la web en sí) ---
 @app.route("/")
 def index():
-    return app.send_static_file("index.html")
+    return render_template("index.html", es_moderador=es_moderador(g.visitante_id))
 
 
 @app.route("/<path:ruta>")

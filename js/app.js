@@ -2,10 +2,10 @@ const UMBRAL_ESTRELLAS_BUENO = 3;
 const CLAVE_REPORTADOS = "banos_reportados";
 const CENTRO_POR_DEFECTO = [40.4168, -3.7038]; // Madrid, por si no hay geolocalización
 const ZOOM_POR_DEFECTO = 6;
-const INTERVALO_SONDEO_MS = 30000;
+export const INTERVALO_SONDEO_MS = 30000;
 
 // --- Peticiones al servidor propio (app.py) ---
-async function peticionJSON(url, opciones = {}) {
+export async function peticionJSON(url, opciones = {}) {
   const resp = await fetch(url, {
     ...opciones,
     headers: { "Content-Type": "application/json", ...(opciones.headers || {}) },
@@ -104,7 +104,7 @@ async function obtenerTokenHumano() {
 }
 
 // --- Mapa ---
-const map = L.map("map", { zoomControl: false }).setView(CENTRO_POR_DEFECTO, ZOOM_POR_DEFECTO);
+export const map = L.map("map", { zoomControl: false }).setView(CENTRO_POR_DEFECTO, ZOOM_POR_DEFECTO);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -183,13 +183,13 @@ const marcadores = new Map(); // id -> L.Marker
 const datosLavabos = new Map(); // id -> datos básicos (nombre, descripcion, lat, lng)
 let primeraCargaBanos = true;
 
-function escaparHTML(texto) {
+export function escaparHTML(texto) {
   const div = document.createElement("div");
   div.textContent = texto;
   return div.innerHTML;
 }
 
-function formatearFechaRelativa(fechaISO) {
+export function formatearFechaRelativa(fechaISO) {
   if (!fechaISO) return "justo ahora";
   const segundos = Math.floor((Date.now() - new Date(fechaISO).getTime()) / 1000);
   if (segundos < 60) return "justo ahora";
@@ -205,7 +205,7 @@ function formatearFechaRelativa(fechaISO) {
   return `hace ${años} año${años > 1 ? "s" : ""}`;
 }
 
-function quitarMarcador(id) {
+export function quitarMarcador(id) {
   if (marcadores.has(id)) {
     grupoMarcadores.removeLayer(marcadores.get(id));
     marcadores.delete(id);
@@ -283,10 +283,19 @@ const formComentario = document.getElementById("form-comentario");
 
 let idDetalleActual = null;
 
-async function abrirDetalle(id) {
+// Hook opcional: si el panel de moderación está cargado (solo para el
+// moderador), se registra aquí para poder cerrarse solo al abrir una ficha
+// o el formulario. Para el resto de usuarios, js/moderacion.js no se carga
+// y esto se queda en null.
+let alAbrirDetalleOFormulario = null;
+export function registrarCerradorModeracion(fn) {
+  alAbrirDetalleOFormulario = fn;
+}
+
+export async function abrirDetalle(id) {
   cerrarFormulario();
   salirModoAñadir();
-  cerrarModeracion();
+  if (alAbrirDetalleOFormulario) alAbrirDetalleOFormulario();
   idDetalleActual = id;
 
   // Si ya lo teníamos cargado (está visible en el mapa), lo mostramos al
@@ -306,7 +315,7 @@ async function abrirDetalle(id) {
   await cargarDetalle(id);
 }
 
-function cerrarDetalle() {
+export function cerrarDetalle() {
   hojaDetalle.hidden = true;
   idDetalleActual = null;
 }
@@ -647,150 +656,6 @@ async function reportarLavabo(id) {
   }
 }
 
-// --- Panel de moderación (solo visible para el moderador) ---
-const MOTIVOS_REPORTE_TEXTO = {
-  no_existe: "Ya no existe",
-  cerrado: "Está cerrado",
-  informacion_incorrecta: "Información incorrecta",
-  otro: "Otro motivo",
-};
-
-const btnModeracion = document.getElementById("btn-moderacion");
-const contadorModeracion = document.getElementById("contador-moderacion");
-const hojaModeracion = document.getElementById("hoja-moderacion");
-const btnCerrarModeracion = document.getElementById("btn-cerrar-moderacion");
-const listaModeracionReportados = document.getElementById("lista-moderacion-reportados");
-const listaModeracionNuevos = document.getElementById("lista-moderacion-nuevos");
-
-fetch("/api/yo")
-  .then((r) => r.json())
-  .then((datos) => {
-    if (!datos.esModerador) return;
-    btnModeracion.hidden = false;
-    actualizarContadorModeracion();
-    setInterval(actualizarContadorModeracion, INTERVALO_SONDEO_MS);
-  })
-  .catch(() => {});
-
-async function actualizarContadorModeracion() {
-  try {
-    const datos = await peticionJSON("/api/moderacion");
-    const pendientes = datos.reportados.length;
-    contadorModeracion.textContent = String(pendientes);
-    contadorModeracion.hidden = pendientes === 0;
-  } catch {
-    /* si falla, simplemente no se actualiza el contador */
-  }
-}
-
-function cerrarModeracion() {
-  hojaModeracion.hidden = true;
-}
-
-btnCerrarModeracion.addEventListener("click", cerrarModeracion);
-
-btnModeracion.addEventListener("click", async () => {
-  cerrarDetalle();
-  cerrarFormulario();
-  hojaModeracion.hidden = false;
-  listaModeracionReportados.innerHTML = "";
-  listaModeracionNuevos.innerHTML = "";
-  await recargarModeracion();
-});
-
-function irAModeracionItem(id, lat, lng) {
-  cerrarModeracion();
-  map.panTo([lat, lng]);
-  abrirDetalle(String(id));
-}
-
-async function recargarModeracion() {
-  try {
-    const datos = await peticionJSON("/api/moderacion");
-    renderizarModeracion(datos);
-  } catch (err) {
-    console.error(err);
-    mostrarToast(err.message || "No se pudo actualizar el panel.", "error");
-  }
-}
-
-async function eliminarDesdeModeracion(id, nombre) {
-  const confirmado = await confirmarAccion(
-    `¿Eliminar definitivamente "${nombre}"? Esta acción no se puede deshacer.`
-  );
-  if (!confirmado) return;
-  try {
-    await peticionJSON(`/api/banos/${id}`, { method: "DELETE" });
-    quitarMarcador(String(id));
-    mostrarToast("Baño eliminado.", "success");
-    await recargarModeracion();
-  } catch (err) {
-    console.error(err);
-    mostrarToast(err.message || "No se pudo eliminar el baño.", "error");
-  }
-}
-
-function renderizarModeracion(datos) {
-  contadorModeracion.textContent = String(datos.reportados.length);
-  contadorModeracion.hidden = datos.reportados.length === 0;
-
-  listaModeracionReportados.innerHTML = datos.reportados.length
-    ? datos.reportados
-        .map((b) => {
-          const detalle = b.detalleReportes
-            .map((r) => {
-              const texto = MOTIVOS_REPORTE_TEXTO[r.motivo] || r.motivo;
-              return r.comentario ? `${texto}: "${escaparHTML(r.comentario)}"` : texto;
-            })
-            .join(" · ");
-          return `
-      <div class="item-reportado ${b.oculto ? "item-oculto" : ""}">
-        <button type="button" class="item-reportado-cuerpo" data-id="${b.id}" data-lat="${b.lat}" data-lng="${b.lng}">
-          <strong>${escaparHTML(b.nombre)}</strong>
-          <span>${b.reportes} reporte${b.reportes === 1 ? "" : "s"}${b.oculto ? " · oculto del mapa" : ""}</span>
-          ${detalle ? `<span>${detalle}</span>` : ""}
-        </button>
-        <div class="item-reportado-acciones">
-          <button type="button" class="btn-editar-moderacion" data-id="${b.id}">Editar</button>
-          <button type="button" class="btn-eliminar-moderacion" data-id="${b.id}" data-nombre="${escaparHTML(b.nombre)}">Eliminar</button>
-        </div>
-      </div>
-    `;
-        })
-        .join("")
-    : `<p class="sin-comentarios">No hay baños reportados.</p>`;
-
-  listaModeracionNuevos.innerHTML = datos.nuevos.length
-    ? datos.nuevos
-        .map(
-          (b) => `
-      <button type="button" class="item-moderacion" data-id="${b.id}" data-lat="${b.lat}" data-lng="${b.lng}">
-        <strong>${escaparHTML(b.nombre)}</strong>
-        <span>${formatearFechaRelativa(b.creadoEn)} · ${b.esSistema ? "puesto por el sistema" : "puesto por un usuario"}</span>
-      </button>
-    `
-        )
-        .join("")
-    : `<p class="sin-comentarios">No hay baños nuevos todavía.</p>`;
-
-  listaModeracionReportados.querySelectorAll(".item-reportado-cuerpo").forEach((el) => {
-    el.addEventListener("click", () =>
-      irAModeracionItem(el.dataset.id, parseFloat(el.dataset.lat), parseFloat(el.dataset.lng))
-    );
-  });
-  listaModeracionReportados.querySelectorAll(".btn-editar-moderacion").forEach((btn) => {
-    btn.addEventListener("click", () => abrirFormularioEdicion(String(btn.dataset.id)));
-  });
-  listaModeracionReportados.querySelectorAll(".btn-eliminar-moderacion").forEach((btn) => {
-    btn.addEventListener("click", () => eliminarDesdeModeracion(btn.dataset.id, btn.dataset.nombre));
-  });
-  listaModeracionNuevos.querySelectorAll(".item-moderacion").forEach((el) => {
-    el.addEventListener("click", () =>
-      irAModeracionItem(el.dataset.id, parseFloat(el.dataset.lat), parseFloat(el.dataset.lng))
-    );
-  });
-}
-
 // --- Añadir un baño nuevo ---
 const btnAñadir = document.getElementById("btn-añadir");
 const avisoModoAñadir = document.getElementById("aviso-modo-añadir");
@@ -864,7 +729,7 @@ function abrirFormulario(latlng) {
   hojaFormulario.hidden = false;
 }
 
-async function abrirFormularioEdicion(id) {
+export async function abrirFormularioEdicion(id) {
   let datos = datosLavabos.get(id) || (ultimoDetalleCargado && String(ultimoDetalleCargado.id) === id ? ultimoDetalleCargado : null);
   if (!datos) {
     // Ej: un baño oculto abierto para editar directamente desde el panel de
@@ -878,7 +743,7 @@ async function abrirFormularioEdicion(id) {
   }
 
   cerrarDetalle();
-  cerrarModeracion();
+  if (alAbrirDetalleOFormulario) alAbrirDetalleOFormulario();
   salirModoAñadir();
   modoEdicionId = id;
   formularioTitulo.textContent = "Editar baño público";
@@ -908,7 +773,7 @@ async function abrirFormularioEdicion(id) {
   hojaFormulario.hidden = false;
 }
 
-function cerrarFormulario() {
+export function cerrarFormulario() {
   hojaFormulario.hidden = true;
   modoEdicionId = null;
   if (marcadorTemporal) {
@@ -976,7 +841,7 @@ formLavabo.addEventListener("submit", async (e) => {
 
 // --- Aviso / toast / confirmación ---
 let toastTimeout;
-function mostrarToast(mensaje, tipo = "info", duracion = 4000) {
+export function mostrarToast(mensaje, tipo = "info", duracion = 4000) {
   const toast = document.getElementById("toast");
   toast.textContent = mensaje;
   toast.className = `toast toast-${tipo} visible`;
@@ -989,7 +854,7 @@ const modalTexto = document.getElementById("modal-texto");
 const modalBtnCancelar = document.getElementById("modal-btn-cancelar");
 const modalBtnConfirmar = document.getElementById("modal-btn-confirmar");
 
-function confirmarAccion(mensaje) {
+export function confirmarAccion(mensaje) {
   return new Promise((resolve) => {
     const disparador = document.activeElement;
     modalTexto.textContent = mensaje;

@@ -580,20 +580,38 @@ function marcarComoReportado(id) {
 
 const hojaMotivoReporte = document.getElementById("hoja-motivo-reporte");
 const btnCancelarMotivo = document.getElementById("btn-cancelar-motivo");
+const btnEnviarMotivo = document.getElementById("btn-enviar-motivo");
+const motivoComentario = document.getElementById("motivo-comentario");
 
 function elegirMotivoReporte() {
   return new Promise((resolve) => {
     hojaMotivoReporte.hidden = false;
-    const botones = hojaMotivoReporte.querySelectorAll("[data-motivo]");
-    const limpiar = (motivo) => {
+    motivoComentario.value = "";
+    btnEnviarMotivo.disabled = true;
+    let motivoSeleccionado = null;
+    const botones = hojaMotivoReporte.querySelectorAll(".motivo-boton");
+    botones.forEach((b) => b.classList.remove("activo"));
+
+    const limpiar = (resultado) => {
       hojaMotivoReporte.hidden = true;
-      botones.forEach((b) => b.removeEventListener("click", onClick));
+      botones.forEach((b) => b.removeEventListener("click", onClickMotivo));
+      btnEnviarMotivo.removeEventListener("click", onEnviar);
       btnCancelarMotivo.removeEventListener("click", onCancelar);
-      resolve(motivo);
+      resolve(resultado);
     };
-    const onClick = (e) => limpiar(e.currentTarget.dataset.motivo);
+    const onClickMotivo = (e) => {
+      motivoSeleccionado = e.currentTarget.dataset.motivo;
+      botones.forEach((b) => b.classList.toggle("activo", b === e.currentTarget));
+      btnEnviarMotivo.disabled = false;
+    };
+    const onEnviar = () => {
+      if (!motivoSeleccionado) return;
+      limpiar({ motivo: motivoSeleccionado, comentario: motivoComentario.value.trim() });
+    };
     const onCancelar = () => limpiar(null);
-    botones.forEach((b) => b.addEventListener("click", onClick));
+
+    botones.forEach((b) => b.addEventListener("click", onClickMotivo));
+    btnEnviarMotivo.addEventListener("click", onEnviar);
     btnCancelarMotivo.addEventListener("click", onCancelar);
   });
 }
@@ -603,15 +621,15 @@ async function reportarLavabo(id) {
     mostrarToast("Ya has reportado este baño anteriormente.", "info");
     return;
   }
-  const motivo = await elegirMotivoReporte();
-  if (!motivo) return;
+  const resultado = await elegirMotivoReporte();
+  if (!resultado) return;
 
   detalleBtnReportar.disabled = true;
   try {
     const turnstile_token = await obtenerTokenHumano();
     await peticionJSON(`/api/banos/${id}/reportar`, {
       method: "POST",
-      body: JSON.stringify({ motivo, turnstile_token }),
+      body: JSON.stringify({ ...resultado, turnstile_token }),
     });
     marcarComoReportado(id);
     quitarMarcador(id);
@@ -677,19 +695,39 @@ btnModeracion.addEventListener("click", async () => {
   hojaModeracion.hidden = false;
   listaModeracionReportados.innerHTML = "";
   listaModeracionNuevos.innerHTML = "";
-  try {
-    const datos = await peticionJSON("/api/moderacion");
-    renderizarModeracion(datos);
-  } catch (err) {
-    console.error(err);
-    mostrarToast(err.message || "No se pudo cargar el panel de moderación.", "error");
-  }
+  await recargarModeracion();
 });
 
 function irAModeracionItem(id, lat, lng) {
   cerrarModeracion();
   map.panTo([lat, lng]);
-  abrirDetalle(id);
+  abrirDetalle(String(id));
+}
+
+async function recargarModeracion() {
+  try {
+    const datos = await peticionJSON("/api/moderacion");
+    renderizarModeracion(datos);
+  } catch (err) {
+    console.error(err);
+    mostrarToast(err.message || "No se pudo actualizar el panel.", "error");
+  }
+}
+
+async function eliminarDesdeModeracion(id, nombre) {
+  const confirmado = await confirmarAccion(
+    `¿Eliminar definitivamente "${nombre}"? Esta acción no se puede deshacer.`
+  );
+  if (!confirmado) return;
+  try {
+    await peticionJSON(`/api/banos/${id}`, { method: "DELETE" });
+    quitarMarcador(String(id));
+    mostrarToast("Baño eliminado.", "success");
+    await recargarModeracion();
+  } catch (err) {
+    console.error(err);
+    mostrarToast(err.message || "No se pudo eliminar el baño.", "error");
+  }
 }
 
 function renderizarModeracion(datos) {
@@ -698,15 +736,27 @@ function renderizarModeracion(datos) {
 
   listaModeracionReportados.innerHTML = datos.reportados.length
     ? datos.reportados
-        .map(
-          (b) => `
-      <button type="button" class="item-moderacion ${b.oculto ? "item-oculto" : ""}" data-id="${b.id}">
-        <strong>${escaparHTML(b.nombre)}</strong>
-        <span>${b.reportes} reporte${b.reportes === 1 ? "" : "s"}${b.oculto ? " · oculto del mapa" : ""}</span>
-        <span>${b.motivos.map((m) => MOTIVOS_REPORTE_TEXTO[m] || m).join(", ")}</span>
-      </button>
-    `
-        )
+        .map((b) => {
+          const detalle = b.detalleReportes
+            .map((r) => {
+              const texto = MOTIVOS_REPORTE_TEXTO[r.motivo] || r.motivo;
+              return r.comentario ? `${texto}: "${escaparHTML(r.comentario)}"` : texto;
+            })
+            .join(" · ");
+          return `
+      <div class="item-reportado ${b.oculto ? "item-oculto" : ""}">
+        <button type="button" class="item-reportado-cuerpo" data-id="${b.id}" data-lat="${b.lat}" data-lng="${b.lng}">
+          <strong>${escaparHTML(b.nombre)}</strong>
+          <span>${b.reportes} reporte${b.reportes === 1 ? "" : "s"}${b.oculto ? " · oculto del mapa" : ""}</span>
+          ${detalle ? `<span>${detalle}</span>` : ""}
+        </button>
+        <div class="item-reportado-acciones">
+          <button type="button" class="btn-editar-moderacion" data-id="${b.id}">Editar</button>
+          <button type="button" class="btn-eliminar-moderacion" data-id="${b.id}" data-nombre="${escaparHTML(b.nombre)}">Eliminar</button>
+        </div>
+      </div>
+    `;
+        })
         .join("")
     : `<p class="sin-comentarios">No hay baños reportados.</p>`;
 
@@ -714,7 +764,7 @@ function renderizarModeracion(datos) {
     ? datos.nuevos
         .map(
           (b) => `
-      <button type="button" class="item-moderacion" data-id="${b.id}">
+      <button type="button" class="item-moderacion" data-id="${b.id}" data-lat="${b.lat}" data-lng="${b.lng}">
         <strong>${escaparHTML(b.nombre)}</strong>
         <span>${formatearFechaRelativa(b.creadoEn)} · ${b.esSistema ? "puesto por el sistema" : "puesto por un usuario"}</span>
       </button>
@@ -723,10 +773,21 @@ function renderizarModeracion(datos) {
         .join("")
     : `<p class="sin-comentarios">No hay baños nuevos todavía.</p>`;
 
-  const filas = [...datos.reportados, ...datos.nuevos];
-  hojaModeracion.querySelectorAll(".item-moderacion").forEach((el) => {
-    const fila = filas.find((f) => String(f.id) === el.dataset.id);
-    if (fila) el.addEventListener("click", () => irAModeracionItem(fila.id, fila.lat, fila.lng));
+  listaModeracionReportados.querySelectorAll(".item-reportado-cuerpo").forEach((el) => {
+    el.addEventListener("click", () =>
+      irAModeracionItem(el.dataset.id, parseFloat(el.dataset.lat), parseFloat(el.dataset.lng))
+    );
+  });
+  listaModeracionReportados.querySelectorAll(".btn-editar-moderacion").forEach((btn) => {
+    btn.addEventListener("click", () => abrirFormularioEdicion(String(btn.dataset.id)));
+  });
+  listaModeracionReportados.querySelectorAll(".btn-eliminar-moderacion").forEach((btn) => {
+    btn.addEventListener("click", () => eliminarDesdeModeracion(btn.dataset.id, btn.dataset.nombre));
+  });
+  listaModeracionNuevos.querySelectorAll(".item-moderacion").forEach((el) => {
+    el.addEventListener("click", () =>
+      irAModeracionItem(el.dataset.id, parseFloat(el.dataset.lat), parseFloat(el.dataset.lng))
+    );
   });
 }
 
@@ -803,11 +864,21 @@ function abrirFormulario(latlng) {
   hojaFormulario.hidden = false;
 }
 
-function abrirFormularioEdicion(id) {
-  const datos = datosLavabos.get(id) || (ultimoDetalleCargado && String(ultimoDetalleCargado.id) === id ? ultimoDetalleCargado : null);
-  if (!datos) return;
+async function abrirFormularioEdicion(id) {
+  let datos = datosLavabos.get(id) || (ultimoDetalleCargado && String(ultimoDetalleCargado.id) === id ? ultimoDetalleCargado : null);
+  if (!datos) {
+    // Ej: un baño oculto abierto para editar directamente desde el panel de
+    // moderación, sin haber visto antes su ficha.
+    try {
+      datos = await peticionJSON(`/api/banos/${id}`);
+    } catch (err) {
+      mostrarToast(err.message || "No se pudo cargar este baño.", "error");
+      return;
+    }
+  }
 
   cerrarDetalle();
+  cerrarModeracion();
   salirModoAñadir();
   modoEdicionId = id;
   formularioTitulo.textContent = "Editar baño público";

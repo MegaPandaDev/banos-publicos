@@ -554,12 +554,86 @@ textarea {
   color: var(--color-peligro);
 }
 
+/* Igual que .item-moderacion pero con acciones de editar/eliminar aparte,
+   para los baños reportados. */
+.item-reportado {
+  background: var(--color-superficie-sutil);
+  border-radius: var(--radio-s);
+  padding: 0.5rem 0.7rem;
+  margin: 0 0 0.5rem;
+}
+
+.item-reportado-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.item-reportado-cuerpo strong {
+  font-size: 0.9rem;
+}
+
+.item-reportado-cuerpo span {
+  font-size: 0.78rem;
+  color: var(--color-texto-tenue);
+}
+
+.item-reportado.item-oculto .item-reportado-cuerpo span {
+  color: var(--color-peligro);
+}
+
+.item-reportado-acciones {
+  display: flex;
+  gap: 0.9rem;
+  margin-top: 0.4rem;
+}
+
+.item-reportado-acciones button {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-primario-oscuro);
+}
+
+.item-reportado-acciones .btn-eliminar-moderacion {
+  color: var(--color-peligro);
+}
+
 /* Selector de motivo al reportar */
 .motivos-reporte {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   margin-bottom: 0.7rem;
+}
+
+.motivo-boton.activo {
+  background: var(--color-primario);
+  color: white;
+}
+
+#hoja-motivo-reporte textarea {
+  width: 100%;
+  border: 1px solid var(--color-borde-input);
+  border-radius: var(--radio-s);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  padding: 0.6rem 0.7rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
 }
 
 .comentario-acciones-propias {

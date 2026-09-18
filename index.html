@@ -183,14 +183,21 @@
     <div id="hoja-motivo-reporte" class="hoja" hidden>
       <h2>¿Por qué reportas este baño?</h2>
       <div class="motivos-reporte">
-        <button type="button" class="btn-secundario" data-motivo="no_existe">Ya no existe</button>
-        <button type="button" class="btn-secundario" data-motivo="cerrado">Está cerrado</button>
-        <button type="button" class="btn-secundario" data-motivo="informacion_incorrecta">
+        <button type="button" class="btn-secundario motivo-boton" data-motivo="no_existe">Ya no existe</button>
+        <button type="button" class="btn-secundario motivo-boton" data-motivo="cerrado">Está cerrado</button>
+        <button type="button" class="btn-secundario motivo-boton" data-motivo="informacion_incorrecta">
           Información incorrecta
         </button>
-        <button type="button" class="btn-secundario" data-motivo="otro">Otro motivo</button>
+        <button type="button" class="btn-secundario motivo-boton" data-motivo="otro">Otro motivo</button>
       </div>
-      <button type="button" id="btn-cancelar-motivo" class="btn-secundario">Cancelar</button>
+      <label>
+        Comentario (opcional)
+        <textarea id="motivo-comentario" maxlength="400" rows="2" placeholder="Añade más detalles si quieres..."></textarea>
+      </label>
+      <div class="hoja-acciones">
+        <button type="button" id="btn-cancelar-motivo" class="btn-secundario">Cancelar</button>
+        <button type="button" id="btn-enviar-motivo" class="btn-primario" disabled>Enviar reporte</button>
+      </div>
     </div>
 
     <div id="turnstile-contenedor"></div>

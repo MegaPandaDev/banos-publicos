@@ -261,6 +261,7 @@ def reportar(bano_id):
     motivo = cuerpo.get("motivo")
     if motivo not in MOTIVOS_REPORTE:
         return jsonify({"error": "Indica un motivo válido para el reporte."}), 400
+    comentario = str(cuerpo.get("comentario") or "").strip()[:400] or None
 
     if not turnstile.token_valido(cuerpo.get("turnstile_token"), request.remote_addr):
         return jsonify({"error": MENSAJE_ROBOT}), 400
@@ -273,8 +274,8 @@ def reportar(bano_id):
 
         try:
             cur.execute(
-                "INSERT INTO reportes (bano_id, visitante_id, motivo) VALUES (%s, %s, %s)",
-                (bano_id, g.visitante_id, motivo),
+                "INSERT INTO reportes (bano_id, visitante_id, motivo, comentario) VALUES (%s, %s, %s, %s)",
+                (bano_id, g.visitante_id, motivo, comentario),
             )
         except psycopg.errors.UniqueViolation:
             con.rollback()
@@ -307,16 +308,18 @@ def moderacion():
         )
         reportados = cur.fetchall()
 
-        motivos_por_bano = {}
+        reportes_por_bano = {}
         ids_reportados = [b["id"] for b in reportados]
         if ids_reportados:
             cur.execute(
-                """SELECT bano_id, motivo FROM reportes
+                """SELECT bano_id, motivo, comentario FROM reportes
                    WHERE bano_id = ANY(%s) ORDER BY creado_en DESC""",
                 (ids_reportados,),
             )
             for fila in cur.fetchall():
-                motivos_por_bano.setdefault(fila["bano_id"], []).append(fila["motivo"])
+                reportes_por_bano.setdefault(fila["bano_id"], []).append(
+                    {"motivo": fila["motivo"], "comentario": fila["comentario"]}
+                )
 
     return jsonify(
         {
@@ -340,7 +343,7 @@ def moderacion():
                     "lng": b["lng"],
                     "reportes": b["reportes"],
                     "oculto": b["oculto"],
-                    "motivos": motivos_por_bano.get(b["id"], []),
+                    "detalleReportes": reportes_por_bano.get(b["id"], []),
                 }
                 for b in reportados
             ],

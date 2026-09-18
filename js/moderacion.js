@@ -11,6 +11,7 @@ import {
   cerrarDetalle,
   cerrarFormulario,
   cerrarInfo,
+  modalOverlay,
   registrarCerradorModeracion,
   registrarSelectorIcono,
   registrarObtenerIconoSeleccionado,
@@ -69,6 +70,18 @@ function cerrarModeracion() {
 }
 
 btnCerrarModeracion.addEventListener("click", cerrarModeracion);
+
+// Igual que el listener de app.js para el resto de hojas: cierra el panel
+// al tocar/hacer clic fuera de él (en fase de captura, y solo si no hay un
+// modal de confirmación abierto gestionando su propio cierre).
+document.addEventListener(
+  "click",
+  (e) => {
+    if (!modalOverlay.hidden) return;
+    if (!hojaModeracion.hidden && !hojaModeracion.contains(e.target)) cerrarModeracion();
+  },
+  true
+);
 
 btnModeracion.addEventListener("click", async () => {
   cerrarDetalle();

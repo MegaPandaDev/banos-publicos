@@ -907,7 +907,7 @@ export function mostrarToast(mensaje, tipo = "info", duracion = 4000) {
   toastTimeout = setTimeout(() => toast.classList.remove("visible"), duracion);
 }
 
-const modalOverlay = document.getElementById("modal-overlay");
+export const modalOverlay = document.getElementById("modal-overlay");
 const modalTexto = document.getElementById("modal-texto");
 const modalBtnCancelar = document.getElementById("modal-btn-cancelar");
 const modalBtnConfirmar = document.getElementById("modal-btn-confirmar");
@@ -953,6 +953,34 @@ export function confirmarAccion(mensaje) {
     document.addEventListener("keydown", onTecla);
   });
 }
+
+// --- Cerrar hojas al tocar/hacer clic fuera de ellas ---
+// Se escucha en fase de captura (el 3er argumento "true") para que esto se
+// resuelva ANTES que el propio click que abre otra hoja (p. ej. tocar un
+// marcador distinto mientras hay una ficha abierta): así se cierra la hoja
+// vieja primero y luego el propio manejador del marcador abre la nueva, en
+// vez de abrirla y que este listener la cierre justo después por error.
+// Si hay un modal de confirmación abierto, se deja que él gestione su
+// propio cierre al tocar fuera.
+function esClicEnMarcadorTemporal(objetivo) {
+  const el = marcadorTemporal && marcadorTemporal.getElement();
+  return !!el && el.contains(objetivo);
+}
+
+document.addEventListener(
+  "click",
+  (e) => {
+    if (!modalOverlay.hidden) return;
+    if (esClicEnMarcadorTemporal(e.target)) return; // arrastrar el pin del formulario no debe cerrarlo
+    if (!hojaDetalle.hidden && !hojaDetalle.contains(e.target)) cerrarDetalle();
+    if (!hojaFormulario.hidden && !hojaFormulario.contains(e.target)) cerrarFormulario();
+    if (!hojaInfo.hidden && !hojaInfo.contains(e.target)) cerrarInfo();
+    if (!hojaMotivoReporte.hidden && !hojaMotivoReporte.contains(e.target)) {
+      btnCancelarMotivo.click();
+    }
+  },
+  true
+);
 
 // --- Cookies / anuncios ---
 // De momento AD_SENSE_CLIENTE es null (aún no hay cuenta de AdSense aprobada), así que

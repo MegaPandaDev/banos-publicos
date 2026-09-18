@@ -159,6 +159,35 @@
       </div>
     </div>
 
+    <div id="hoja-info" class="hoja" hidden>
+      <button type="button" id="btn-cerrar-info" class="btn-cerrar" aria-label="Cerrar">
+        <img src="icons/cruz.svg" class="icono-cerrar" alt="" />
+      </button>
+
+      <h2>Sobre este mapa</h2>
+      <p>
+        No hemos podido verificar todas las ubicaciones y algunas pueden ser incorrectas.
+        ¡Os animamos a que reportéis cualquier error que veáis, para hacer de esta app una
+        herramienta infalible!
+      </p>
+
+      <p class="detalle-subtitulo">¿Qué significan los iconos?</p>
+      <div class="leyenda-iconos">
+        <div class="leyenda-fila">
+          <img src="icons/marcador-wc.svg" class="leyenda-icono" alt="" />
+          <span>Verificado por el equipo de Meaquí</span>
+        </div>
+        <div class="leyenda-fila">
+          <img src="icons/marcador-wc-usuario.svg" class="leyenda-icono" alt="" />
+          <span>Añadido por la comunidad</span>
+        </div>
+        <div class="leyenda-fila">
+          <img src="icons/marcador-wc-pago.svg" class="leyenda-icono" alt="" />
+          <span>Baño de pago</span>
+        </div>
+      </div>
+    </div>
+
     {% if es_moderador %}
     <div id="hoja-moderacion" class="hoja" hidden>
       <button type="button" id="btn-cerrar-moderacion" class="btn-cerrar" aria-label="Cerrar">

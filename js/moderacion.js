@@ -10,6 +10,7 @@ import {
   abrirFormularioEdicion,
   cerrarDetalle,
   cerrarFormulario,
+  cerrarInfo,
   registrarCerradorModeracion,
   registrarSelectorIcono,
   registrarObtenerIconoSeleccionado,
@@ -72,6 +73,7 @@ btnCerrarModeracion.addEventListener("click", cerrarModeracion);
 btnModeracion.addEventListener("click", async () => {
   cerrarDetalle();
   cerrarFormulario();
+  cerrarInfo();
   hojaModeracion.hidden = false;
   listaModeracionReportados.innerHTML = "";
   listaModeracionNuevos.innerHTML = "";

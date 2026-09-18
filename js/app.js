@@ -307,6 +307,7 @@ export function registrarObtenerIconoSeleccionado(fn) {
 
 export async function abrirDetalle(id) {
   cerrarFormulario();
+  cerrarInfo();
   salirModoAñadir();
   if (alAbrirDetalleOFormulario) alAbrirDetalleOFormulario();
   idDetalleActual = id;
@@ -334,6 +335,36 @@ export function cerrarDetalle() {
 }
 
 btnCerrarDetalle.addEventListener("click", cerrarDetalle);
+
+// --- Información sobre la app (icono "?" en el mapa) ---
+const hojaInfo = document.getElementById("hoja-info");
+const btnCerrarInfo = document.getElementById("btn-cerrar-info");
+
+export function cerrarInfo() {
+  hojaInfo.hidden = true;
+}
+
+btnCerrarInfo.addEventListener("click", cerrarInfo);
+
+const BotonInfo = L.Control.extend({
+  options: { position: "topleft" },
+  onAdd() {
+    const btn = L.DomUtil.create("button", "boton-mapa boton-info");
+    btn.type = "button";
+    btn.title = "Información sobre la app";
+    btn.setAttribute("aria-label", btn.title);
+    btn.textContent = "?";
+    L.DomEvent.disableClickPropagation(btn);
+    btn.addEventListener("click", () => {
+      cerrarDetalle();
+      cerrarFormulario();
+      if (alAbrirDetalleOFormulario) alAbrirDetalleOFormulario();
+      hojaInfo.hidden = false;
+    });
+    return btn;
+  },
+});
+map.addControl(new BotonInfo());
 
 detalleBtnLlegar.addEventListener("click", (e) => {
   const { lat, lng } = e.currentTarget.dataset;
@@ -702,7 +733,10 @@ btnAñadir.addEventListener("click", () => {
   btnAñadir.classList.toggle("activo", modoAñadir);
   avisoModoAñadir.hidden = !modoAñadir;
   mapaEl.classList.toggle("modo-añadir", modoAñadir);
-  if (modoAñadir) cerrarDetalle();
+  if (modoAñadir) {
+    cerrarDetalle();
+    cerrarInfo();
+  }
 });
 
 map.on("click", (e) => {
@@ -724,6 +758,7 @@ btnUsarUbicacion.addEventListener("click", () => {
 
 function abrirFormulario(latlng) {
   salirModoAñadir();
+  cerrarInfo();
   modoEdicionId = null;
   formularioTitulo.textContent = "Añadir baño público";
   formularioBtnGuardar.textContent = "Guardar";
@@ -763,6 +798,7 @@ export async function abrirFormularioEdicion(id) {
   }
 
   cerrarDetalle();
+  cerrarInfo();
   if (alAbrirDetalleOFormulario) alAbrirDetalleOFormulario();
   salirModoAñadir();
   modoEdicionId = id;

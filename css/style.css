@@ -798,7 +798,7 @@ textarea {
 /* Botón flotante añadir */
 .fab {
   position: fixed;
-  right: 1rem;
+  left: 1rem;
   bottom: calc(env(safe-area-inset-bottom, 0) + 1.25rem);
   width: 60px;
   height: 60px;
@@ -809,6 +809,10 @@ textarea {
   font-family: var(--fuente-display);
   font-size: 2rem;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   box-shadow: var(--sombra);
   cursor: pointer;
   z-index: 1000;

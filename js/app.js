@@ -607,6 +607,11 @@ const motivoComentario = document.getElementById("motivo-comentario");
 
 function elegirMotivoReporte() {
   return new Promise((resolve) => {
+    // Se oculta la ficha del baño mientras se elige el motivo: al ser las
+    // dos hojas de altura distinta y ambas fijas al borde inferior, tenerlas
+    // abiertas a la vez dejaba la cabecera de la ficha asomando por encima
+    // (muy visible en pantallas de móvil, con menos alto disponible).
+    hojaDetalle.hidden = true;
     hojaMotivoReporte.hidden = false;
     motivoComentario.value = "";
     btnEnviarMotivo.disabled = true;
@@ -616,6 +621,7 @@ function elegirMotivoReporte() {
 
     const limpiar = (resultado) => {
       hojaMotivoReporte.hidden = true;
+      hojaDetalle.hidden = false;
       botones.forEach((b) => b.removeEventListener("click", onClickMotivo));
       btnEnviarMotivo.removeEventListener("click", onEnviar);
       btnCancelarMotivo.removeEventListener("click", onCancelar);

@@ -23,6 +23,7 @@
   --radio-m: 16px;
   --radio-l: 24px;
   --curva-salida: cubic-bezier(0.23, 1, 0.32, 1);
+  --curva-hoja: cubic-bezier(0.32, 0.72, 0, 1);
   color-scheme: light dark;
 }
 
@@ -254,15 +255,27 @@ textarea {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
+  display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1400;
   padding: 1rem;
-  animation: entrada-fundido 0.2s ease-out;
+  opacity: 1;
+  transition:
+    opacity 0.2s var(--curva-salida),
+    display 0.2s allow-discrete,
+    overlay 0.2s allow-discrete;
 }
 
-.modal-overlay:not([hidden]) {
-  display: flex;
+.modal-overlay[hidden] {
+  display: none;
+  opacity: 0;
+}
+
+@starting-style {
+  .modal-overlay:not([hidden]) {
+    opacity: 0;
+  }
 }
 
 .modal-caja {
@@ -273,7 +286,24 @@ textarea {
   max-width: 340px;
   width: 100%;
   box-shadow: var(--sombra);
-  animation: entrada-modal 0.22s var(--curva-salida);
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.22s var(--curva-salida), transform 0.22s var(--curva-salida);
+}
+
+/* La caja interior no lleva su propio [hidden]; anima según el estado del
+   overlay que la envuelve, tanto al aparecer como (vía @starting-style) al
+   desaparecer. */
+.modal-overlay[hidden] .modal-caja {
+  opacity: 0;
+  transform: scale(0.94);
+}
+
+@starting-style {
+  .modal-overlay:not([hidden]) .modal-caja {
+    opacity: 0;
+    transform: scale(0.94);
+  }
 }
 
 .modal-caja p {
@@ -341,6 +371,11 @@ textarea {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.btn-cerrar:active {
+  transform: scale(0.92);
 }
 
 #detalle-nombre {
@@ -442,7 +477,11 @@ textarea {
   padding: 0.1rem 0.15rem;
   color: var(--color-acento);
   cursor: pointer;
-  transition: transform 0.15s var(--curva-salida);
+  transition: transform 0.1s var(--curva-salida);
+}
+
+.estrella-boton:active:not(:disabled) {
+  transform: scale(0.9);
 }
 
 .estrella-boton:disabled {
@@ -502,6 +541,7 @@ textarea {
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
 .contador-moderacion {
@@ -539,6 +579,7 @@ textarea {
   text-align: left;
   font-family: inherit;
   color: inherit;
+  transition: background 0.15s ease;
 }
 
 .item-moderacion strong {
@@ -569,12 +610,15 @@ textarea {
   gap: 0.2rem;
   border: none;
   background: none;
+  border-radius: var(--radio-s);
   width: 100%;
   text-align: left;
   font-family: inherit;
   color: inherit;
   cursor: pointer;
-  padding: 0;
+  padding: 0.2rem;
+  margin: -0.2rem -0.2rem 0.2rem;
+  transition: background 0.15s ease;
 }
 
 .item-reportado-cuerpo strong {
@@ -771,6 +815,11 @@ textarea {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.boton-mapa:active {
+  transform: scale(0.93);
 }
 
 .boton-ubicacion {
@@ -836,7 +885,10 @@ textarea {
   box-shadow: var(--sombra);
   cursor: pointer;
   z-index: 1000;
-  transition: transform 0.15s var(--curva-salida), background 0.15s var(--curva-salida);
+  transition:
+    transform 0.15s var(--curva-salida),
+    background 0.15s var(--curva-salida),
+    box-shadow 0.15s var(--curva-salida);
 }
 
 /* El símbolo "+" se dibuja con dos barras centradas por posición absoluta
@@ -901,10 +953,32 @@ body.con-anuncio .leaflet-bottom {
   z-index: 1100;
   max-height: 80dvh;
   overflow-y: auto;
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.32s var(--curva-hoja),
+    transform 0.32s var(--curva-hoja),
+    display 0.32s allow-discrete,
+    overlay 0.32s allow-discrete;
 }
 
-.hoja:not([hidden]) {
-  animation: entrada-hoja 0.28s var(--curva-salida);
+/* Entrada y salida deslizándose desde abajo (estilo hoja/drawer de iOS). Al
+   animar la propiedad discreta "display" (con allow-discrete) el navegador
+   la aplaza hasta que termina la transición al cerrar, y la adelanta al
+   abrir, así el elemento existe a tiempo para poder animarse en ambos
+   sentidos sin tocar el JS que solo alterna el atributo "hidden". */
+.hoja[hidden] {
+  display: none;
+  opacity: 0;
+  transform: translateY(28px);
+}
+
+@starting-style {
+  .hoja:not([hidden]) {
+    opacity: 0;
+    transform: translateY(28px);
+  }
 }
 
 .hoja h2 {
@@ -962,6 +1036,11 @@ body.con-anuncio .leaflet-bottom {
   cursor: pointer;
   width: 100%;
   margin-bottom: 0.85rem;
+  transition: filter 0.15s ease, transform 0.1s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-secundario:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .btn-secundario:disabled {
@@ -991,6 +1070,11 @@ body.con-anuncio .leaflet-bottom {
   background: var(--color-primario);
   color: white;
   font-weight: 600;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn-primario:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .btn-primario:disabled {
@@ -1005,6 +1089,24 @@ body.con-anuncio .leaflet-bottom {
   border: none;
   border-radius: var(--radio-s);
   cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.btn-peligro:active {
+  transform: scale(0.97);
+}
+
+/* Anillo de foco consistente para navegación por teclado, sin tocar el
+   estado normal de ratón/touch (:focus-visible no salta al hacer clic). */
+.btn-primario:focus-visible,
+.btn-secundario:focus-visible,
+.btn-peligro:focus-visible,
+.btn-cerrar:focus-visible,
+.btn-moderacion:focus-visible,
+.boton-mapa:focus-visible,
+.fab:focus-visible {
+  outline: 2px solid var(--color-primario);
+  outline-offset: 2px;
 }
 
 /* Toast */
@@ -1040,37 +1142,10 @@ body.con-anuncio .leaflet-bottom {
 }
 
 /* --- Animaciones de entrada --- */
-@keyframes entrada-hoja {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes entrada-modal {
-  from {
-    opacity: 0;
-    transform: scale(0.94);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes entrada-fundido {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
+/* Las hojas y el modal ya no usan @keyframes: animan al abrir y al cerrar
+   con transiciones + @starting-style (ver sus reglas más arriba). Solo los
+   avisos flotantes (que no se cierran con "hidden" sino que aparecen y
+   desaparecen solos) siguen con keyframes de solo entrada. */
 @keyframes entrada-chip {
   from {
     opacity: 0;
@@ -1083,9 +1158,12 @@ body.con-anuncio .leaflet-bottom {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hoja:not([hidden]),
+  .hoja,
   .modal-overlay,
-  .modal-caja,
+  .modal-caja {
+    transition-duration: 0.01ms;
+  }
+
   .aviso-actualizacion,
   .aviso-flotante {
     animation: none;
@@ -1129,6 +1207,7 @@ body.con-anuncio .leaflet-bottom {
 
   .fab:hover {
     background: var(--color-primario-oscuro);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
   }
 
   .btn-secundario:hover {
@@ -1141,5 +1220,26 @@ body.con-anuncio .leaflet-bottom {
 
   .btn-peligro:hover {
     filter: brightness(0.9);
+  }
+
+  .btn-moderacion:hover {
+    background: rgba(255, 255, 255, 0.28);
+  }
+
+  .motivo-boton:not(.activo):hover {
+    filter: brightness(0.95);
+  }
+
+  .item-moderacion:hover,
+  .item-reportado-cuerpo:hover {
+    background: color-mix(in srgb, var(--color-primario) 10%, var(--color-superficie-sutil));
+  }
+
+  .item-reportado-acciones button:hover {
+    text-decoration: underline;
+  }
+
+  .enlace-exportar:hover {
+    text-decoration: underline;
   }
 }

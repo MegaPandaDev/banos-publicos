@@ -113,13 +113,35 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 L.control.zoom({ position: "bottomright" }).addTo(map);
 
-const iconoLavabo = L.icon({
-  className: "marcador-lavabo",
-  iconUrl: "icons/marcador-wc.svg",
-  iconSize: [36, 36],
-  iconAnchor: [18, 34],
-  popupAnchor: [0, -31],
+// Tres variantes de icono según quién puso el baño y si es de pago (en ese
+// orden de prioridad: un baño de pago siempre se ve amarillo, sea de quien sea).
+function crearIconoLavabo(archivo) {
+  return L.icon({
+    className: "marcador-lavabo",
+    iconUrl: `icons/${archivo}`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 34],
+    popupAnchor: [0, -31],
+  });
+}
+const iconoSistema = crearIconoLavabo("marcador-wc.svg");
+const iconoUsuario = crearIconoLavabo("marcador-wc-usuario.svg");
+const iconoPago = crearIconoLavabo("marcador-wc-pago.svg");
+
+function elegirIcono(datos) {
+  if (datos.dePago) return iconoPago;
+  if (datos.esSistema) return iconoSistema;
+  return iconoUsuario;
+}
+
+// Agrupa los marcadores en "racimos" cuando están muy juntos (sobre todo con el
+// mapa alejado), y los va separando en iconos individuales al hacer zoom — así
+// no se pintan a la vez todos los baños del país y el móvil no sufre.
+const grupoMarcadores = L.markerClusterGroup({
+  maxClusterRadius: 60,
+  spiderfyOnMaxZoom: false,
 });
+map.addLayer(grupoMarcadores);
 
 function centrarEnMiUbicacion(mostrarError = false) {
   if (!navigator.geolocation) {
@@ -185,7 +207,7 @@ function formatearFechaRelativa(fechaISO) {
 
 function quitarMarcador(id) {
   if (marcadores.has(id)) {
-    map.removeLayer(marcadores.get(id));
+    grupoMarcadores.removeLayer(marcadores.get(id));
     marcadores.delete(id);
   }
   datosLavabos.delete(id);
@@ -202,12 +224,15 @@ function añadirOActualizarMarcador(datos) {
     const marcador = marcadores.get(id);
     const pos = marcador.getLatLng();
     if (pos.lat !== datos.lat || pos.lng !== datos.lng) marcador.setLatLng([datos.lat, datos.lng]);
+    const iconoNuevo = elegirIcono(datos);
+    if (marcador.options.icon !== iconoNuevo) marcador.setIcon(iconoNuevo);
   } else {
-    const marcador = L.marker([datos.lat, datos.lng], { icon: iconoLavabo }).addTo(map);
+    const marcador = L.marker([datos.lat, datos.lng], { icon: elegirIcono(datos) });
     marcador.on("click", (e) => {
       L.DomEvent.stop(e);
       abrirDetalle(id);
     });
+    grupoMarcadores.addLayer(marcador);
     marcadores.set(id, marcador);
   }
 }
@@ -630,7 +655,7 @@ function abrirFormulario(latlng) {
 
   if (marcadorTemporal) map.removeLayer(marcadorTemporal);
   marcadorTemporal = L.marker(latlng, {
-    icon: iconoLavabo,
+    icon: iconoSistema,
     draggable: true,
     opacity: 0.85,
   }).addTo(map);
@@ -661,7 +686,7 @@ function abrirFormularioEdicion(id) {
   const latlng = L.latLng(datos.lat, datos.lng);
   if (marcadorTemporal) map.removeLayer(marcadorTemporal);
   marcadorTemporal = L.marker(latlng, {
-    icon: iconoLavabo,
+    icon: elegirIcono(datos),
     draggable: true,
     opacity: 0.85,
   }).addTo(map);
@@ -707,11 +732,20 @@ formLavabo.addEventListener("submit", async (e) => {
   btnGuardar.disabled = true;
   try {
     if (modoEdicionId) {
-      await peticionJSON(`/api/banos/${modoEdicionId}`, {
+      const resultado = await peticionJSON(`/api/banos/${modoEdicionId}`, {
         method: "PUT",
         body: JSON.stringify({ nombre, descripcion, lat, lng }),
       });
-      añadirOActualizarMarcador({ id: modoEdicionId, nombre, descripcion, lat, lng });
+      const datosPrevios = datosLavabos.get(modoEdicionId);
+      añadirOActualizarMarcador({
+        id: modoEdicionId,
+        nombre,
+        descripcion,
+        lat,
+        lng,
+        dePago: resultado.dePago,
+        esSistema: datosPrevios ? datosPrevios.esSistema : false,
+      });
       mostrarToast("Baño actualizado.", "success");
     } else {
       const turnstile_token = await obtenerTokenHumano();
@@ -719,7 +753,15 @@ formLavabo.addEventListener("submit", async (e) => {
         method: "POST",
         body: JSON.stringify({ nombre, descripcion, lat, lng, turnstile_token }),
       });
-      añadirOActualizarMarcador({ id: resultado.id, nombre, descripcion, lat, lng });
+      añadirOActualizarMarcador({
+        id: resultado.id,
+        nombre,
+        descripcion,
+        lat,
+        lng,
+        dePago: resultado.dePago,
+        esSistema: resultado.esSistema,
+      });
       mostrarToast("¡Gracias! El baño se ha añadido al mapa.", "success");
     }
     cerrarFormulario();

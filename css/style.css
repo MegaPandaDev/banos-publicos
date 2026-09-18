@@ -311,6 +311,20 @@ textarea {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
 }
 
+/* Racimos de marcadores (Leaflet.markercluster) con los colores de la app,
+   en vez del amarillo/naranja/rojo por defecto de la librería. */
+.marker-cluster div {
+  background-color: var(--color-primario);
+  color: white;
+}
+.marker-cluster {
+  background-color: color-mix(in srgb, var(--color-primario) 45%, transparent);
+}
+.marker-cluster span {
+  font-family: var(--fuente-display);
+  font-weight: 600;
+}
+
 /* Hoja de detalle de un baño */
 .btn-cerrar {
   position: absolute;

@@ -17,6 +17,15 @@ UMBRAL_REPORTES = 3
 COOKIE_VISITANTE = "visitante_id"
 MENSAJE_ROBOT = "No se ha podido verificar que no eres un robot. Recarga la página e inténtalo de nuevo."
 
+# Identificadores "del sistema" (tú o yo) de antes de que existiera MODERADOR_ID:
+# el UID de Firebase del moderador previo a la migración, y la sesión usada para
+# importar los baños de Madrid desde OpenStreetMap. Se usan solo para decidir
+# qué icono mostrar en el mapa (blanco = sistema, azul = usuario cualquiera).
+IDS_SISTEMA_HISTORICOS = {
+    "9LTmP4ZlJEcrLfMVLWwDgf8rPw33",
+    "xL75ooYx35a0RPoipF0GXBqIQWC2",
+}
+
 app = Flask(__name__, static_folder=".", static_url_path="")
 
 CSP = (
@@ -51,6 +60,14 @@ def conectar():
 
 def es_moderador(visitante_id: str) -> bool:
     return bool(MODERADOR_ID) and visitante_id == MODERADOR_ID
+
+
+def es_sistema(creado_por: str) -> bool:
+    return creado_por == MODERADOR_ID or creado_por in IDS_SISTEMA_HISTORICOS
+
+
+def es_de_pago(descripcion: str) -> bool:
+    return "de pago" in (descripcion or "").lower()
 
 
 def validar_lavabo(datos: dict):
@@ -110,10 +127,23 @@ def api_turnstile_site_key():
 def listar_banos():
     with conectar() as con, con.cursor() as cur:
         cur.execute(
-            "SELECT id, nombre, descripcion, lat, lng FROM banos WHERE oculto = false ORDER BY id"
+            "SELECT id, nombre, descripcion, lat, lng, creado_por FROM banos WHERE oculto = false ORDER BY id"
         )
         filas = cur.fetchall()
-    return jsonify(filas)
+    return jsonify(
+        [
+            {
+                "id": f["id"],
+                "nombre": f["nombre"],
+                "descripcion": f["descripcion"],
+                "lat": f["lat"],
+                "lng": f["lng"],
+                "dePago": es_de_pago(f["descripcion"]),
+                "esSistema": es_sistema(f["creado_por"]),
+            }
+            for f in filas
+        ]
+    )
 
 
 @app.route("/api/banos", methods=["POST"])
@@ -135,7 +165,13 @@ def crear_bano():
         )
         nuevo_id = cur.fetchone()["id"]
         con.commit()
-    return jsonify({"id": nuevo_id})
+    return jsonify(
+        {
+            "id": nuevo_id,
+            "dePago": es_de_pago(datos["descripcion"]),
+            "esSistema": es_sistema(g.visitante_id),
+        }
+    )
 
 
 @app.route("/api/banos/<int:bano_id>", methods=["GET"])
@@ -200,7 +236,7 @@ def editar_bano(bano_id):
             {**datos, "id": bano_id},
         )
         con.commit()
-    return jsonify({"ok": True})
+    return jsonify({"ok": True, "dePago": es_de_pago(datos["descripcion"])})
 
 
 @app.route("/api/banos/<int:bano_id>", methods=["DELETE"])

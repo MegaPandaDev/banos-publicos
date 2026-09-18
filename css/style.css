@@ -805,18 +805,37 @@ textarea {
   border-radius: 50%;
   border: none;
   background: var(--color-primario);
-  color: white;
-  font-family: var(--fuente-display);
-  font-size: 2rem;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 0;
   box-shadow: var(--sombra);
   cursor: pointer;
   z-index: 1000;
   transition: transform 0.15s var(--curva-salida), background 0.15s var(--curva-salida);
+}
+
+/* El símbolo "+" se dibuja con dos barras centradas por posición absoluta
+   (no con un carácter de texto): así su cruce queda exactamente en el
+   centro del botón sin depender de las métricas de la fuente, y al rotar
+   el botón 45º para el estado "cancelar" gira sobre ese punto en vez de
+   describir un arco. */
+.fab::before,
+.fab::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: white;
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+}
+
+.fab::before {
+  width: 22px;
+  height: 4px;
+}
+
+.fab::after {
+  width: 4px;
+  height: 22px;
 }
 
 .fab:active {

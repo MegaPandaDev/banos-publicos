@@ -24,11 +24,11 @@
      inkscape:deskcolor="#505050"
      inkscape:document-units="mm"
      inkscape:zoom="0.68862935"
-     inkscape:cx="310.03616"
+     inkscape:cx="310.76224"
      inkscape:cy="578.68576"
      inkscape:window-width="1198"
      inkscape:window-height="981"
-     inkscape:window-x="-8"
+     inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1"
@@ -53,7 +53,7 @@
      id="layer1"
      transform="translate(-27.515587,-62.011658)">
     <ellipse
-       style="fill:#ffe700;fill-opacity:1;stroke:#000000;stroke-width:5;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#b3b3b3;fill-opacity:1;stroke:#000000;stroke-width:5;stroke-dasharray:none;stroke-opacity:1"
        id="path1"
        cx="105"
        cy="148.5"
@@ -67,18 +67,18 @@
        rx="7.0637498"
        ry="6.7920671" />
     <path
-       style="fill:#e5e7eb;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
+       style="fill:#e5e7eb;fill-opacity:1;stroke:#000000;stroke-width:2.31012;stroke-dasharray:none"
        inkscape:label="Triangle"
-       d="m 118.63655,147.62508 -15.48649,12.67113 42.75007,36.44935 z"
+       d="m 118.99766,147.87982 -17.16038,15.25634 47.37081,43.88585 z"
        id="path5" />
     <path
-       style="fill:#dc2626;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
+       style="fill:#d40000;fill-opacity:1;stroke:#000000;stroke-width:2.45747;stroke-dasharray:none"
        inkscape:label="Triangle"
-       d="M 91.644713,148.5249 107.67251,136.54582 66.563715,98.254949 Z"
+       d="M 89.753021,151.36096 108.84983,136.18139 59.869529,87.660197 Z"
        id="path5-3" />
     <path
        id="path6"
-       style="fill:#e7e100;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#cccccc;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none;stroke-opacity:1"
        d="m 164.44526,63.011658 a 15.752911,15.752911 0 0 0 -15.75304,15.753043 15.752911,15.752911 0 0 0 15.75304,15.752527 15.752911,15.752911 0 0 0 15.75253,-15.752527 15.752911,15.752911 0 0 0 -15.75253,-15.753043 z m 0.19172,8.452714 a 7.4922376,7.4922376 0 0 1 7.49257,7.492049 7.4922376,7.4922376 0 0 1 -7.49257,7.492566 7.4922376,7.4922376 0 0 1 -7.49205,-7.492566 7.4922376,7.4922376 0 0 1 7.49205,-7.492049 z" />
     <rect
        style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:2;stroke-dasharray:none;stroke-opacity:1"

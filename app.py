@@ -8,6 +8,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from flask import Flask, Response, g, jsonify, render_template, request
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
 import psycopg
 from psycopg.rows import dict_row
 
@@ -31,6 +34,27 @@ IDS_SISTEMA_HISTORICOS = {
 }
 
 app = Flask(__name__, static_folder=".", static_url_path="")
+
+# Render (como la mayoría de PaaS) pone la app detrás de un proxy inverso:
+# sin esto, request.remote_addr sería siempre la IP interna del proxy (igual
+# para todo el mundo), lo que dejaría el límite de peticiones por IP inútil
+# -o peor, bloquearía a todos los visitantes a la vez en cuanto uno solo lo
+# alcanzase- y haría que request.is_secure (usado para la cookie "Secure")
+# diera siempre falso aunque el sitio se sirva por HTTPS.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["300 per hour"],
+    storage_uri="memory://",
+)
+
+
+@app.errorhandler(429)
+def limite_excedido(e):
+    return jsonify({"error": "Has hecho demasiadas peticiones seguidas. Espera un poco e inténtalo de nuevo."}), 429
+
 
 CSP = (
     "default-src 'self'; "
@@ -156,9 +180,14 @@ def api_yo():
 # --- Baños ---
 @app.route("/api/banos", methods=["GET"])
 def listar_banos():
+    # El cliente sincroniza el mapa con un fetch completo cada 30s (ver
+    # cargarBanos en app.js), así que no hay paginación real todavía; este
+    # límite es solo un tope de seguridad para que la respuesta nunca crezca
+    # sin control (con las ~300 filas actuales no cambia nada).
     with conectar() as con, con.cursor() as cur:
         cur.execute(
-            "SELECT id, nombre, descripcion, lat, lng, creado_por, icono FROM banos WHERE oculto = false ORDER BY id"
+            """SELECT id, nombre, descripcion, lat, lng, creado_por, icono FROM banos
+               WHERE oculto = false ORDER BY id LIMIT 5000"""
         )
         filas = cur.fetchall()
     return jsonify(
@@ -178,6 +207,7 @@ def listar_banos():
 
 
 @app.route("/api/banos", methods=["POST"])
+@limiter.limit("10 per hour")
 def crear_bano():
     cuerpo = request.get_json(force=True, silent=True) or {}
     datos, error = validar_lavabo(cuerpo)
@@ -297,6 +327,7 @@ def eliminar_bano(bano_id):
 
 
 @app.route("/api/banos/<int:bano_id>/reportar", methods=["POST"])
+@limiter.limit("15 per hour")
 def reportar(bano_id):
     cuerpo = request.get_json(force=True, silent=True) or {}
     motivo = cuerpo.get("motivo")
@@ -446,6 +477,7 @@ def exportar_moderacion():
 
 # --- Valoraciones ---
 @app.route("/api/banos/<int:bano_id>/valoraciones", methods=["PUT"])
+@limiter.limit("30 per hour")
 def valorar(bano_id):
     cuerpo = request.get_json(force=True, silent=True) or {}
     estrellas = cuerpo.get("estrellas")
@@ -465,6 +497,7 @@ def valorar(bano_id):
 
 # --- Comentarios ---
 @app.route("/api/banos/<int:bano_id>/comentarios", methods=["POST"])
+@limiter.limit("20 per hour")
 def crear_comentario(bano_id):
     cuerpo = request.get_json(force=True, silent=True) or {}
     texto = str(cuerpo.get("texto") or "").strip()
@@ -485,6 +518,7 @@ def crear_comentario(bano_id):
 
 
 @app.route("/api/banos/<int:bano_id>/comentarios/<int:comentario_id>", methods=["PUT"])
+@limiter.limit("20 per hour")
 def editar_comentario(bano_id, comentario_id):
     cuerpo = request.get_json(force=True, silent=True) or {}
     texto = str(cuerpo.get("texto") or "").strip()
@@ -506,6 +540,7 @@ def editar_comentario(bano_id, comentario_id):
 
 
 @app.route("/api/banos/<int:bano_id>/comentarios/<int:comentario_id>", methods=["DELETE"])
+@limiter.limit("20 per hour")
 def borrar_comentario(bano_id, comentario_id):
     with conectar() as con, con.cursor() as cur:
         cur.execute(

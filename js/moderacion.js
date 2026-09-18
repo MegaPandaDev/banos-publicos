@@ -12,6 +12,7 @@ import {
   cerrarFormulario,
   cerrarInfo,
   modalOverlay,
+  activarAccesibilidadHoja,
   registrarCerradorModeracion,
   registrarSelectorIcono,
   registrarObtenerIconoSeleccionado,
@@ -65,8 +66,14 @@ async function actualizarContadorModeracion() {
   }
 }
 
+let desactivarAccesibilidadModeracion = null;
+
 function cerrarModeracion() {
   hojaModeracion.hidden = true;
+  if (desactivarAccesibilidadModeracion) {
+    desactivarAccesibilidadModeracion();
+    desactivarAccesibilidadModeracion = null;
+  }
 }
 
 btnCerrarModeracion.addEventListener("click", cerrarModeracion);
@@ -88,6 +95,7 @@ btnModeracion.addEventListener("click", async () => {
   cerrarFormulario();
   cerrarInfo();
   hojaModeracion.hidden = false;
+  desactivarAccesibilidadModeracion = activarAccesibilidadHoja(hojaModeracion, cerrarModeracion);
   listaModeracionReportados.innerHTML = "";
   listaModeracionNuevos.innerHTML = "";
   await recargarModeracion();

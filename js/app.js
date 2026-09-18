@@ -182,6 +182,8 @@ map.addControl(new BotonUbicacion());
 const marcadores = new Map(); // id -> L.Marker
 const datosLavabos = new Map(); // id -> datos básicos (nombre, descripcion, lat, lng)
 let primeraCargaBanos = true;
+let primerIntentoCarga = true;
+const avisoCargando = document.getElementById("aviso-cargando");
 
 export function escaparHTML(texto) {
   const div = document.createElement("div");
@@ -261,6 +263,11 @@ async function cargarBanos() {
     if (primeraCargaBanos) {
       mostrarToast("No se pudieron cargar los baños. Inténtalo de nuevo más tarde.", "error");
     }
+  } finally {
+    if (primerIntentoCarga) {
+      primerIntentoCarga = false;
+      avisoCargando.hidden = true;
+    }
   }
 }
 
@@ -305,7 +312,52 @@ export function registrarObtenerIconoSeleccionado(fn) {
   obtenerIconoSeleccionado = fn;
 }
 
+// --- Accesibilidad compartida por todas las hojas ---
+// Al abrir: mueve el foco dentro de la hoja y atrapa el Tab/Shift+Tab para
+// que no se escape hacia el mapa de detrás; Escape ejecuta el cierre que se
+// le pase. Al cerrar (llamando a la función que esto devuelve): libera el
+// atrapa-foco y devuelve el foco a quien tenía el foco antes de abrirla.
+// Es exactamente el mismo patrón que ya usaba el modal de confirmación.
+const SELECTOR_ENFOCABLE =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+export function activarAccesibilidadHoja(hoja, alPulsarEscape) {
+  const disparador = document.activeElement;
+  const primero = hoja.querySelector(SELECTOR_ENFOCABLE);
+  if (primero) primero.focus({ preventScroll: true });
+
+  const onTecla = (e) => {
+    if (e.key === "Escape") {
+      alPulsarEscape();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const enfocables = Array.from(hoja.querySelectorAll(SELECTOR_ENFOCABLE)).filter(
+      (el) => el.offsetParent !== null
+    );
+    if (enfocables.length === 0) return;
+    const inicio = enfocables[0];
+    const fin = enfocables[enfocables.length - 1];
+    if (e.shiftKey && document.activeElement === inicio) {
+      e.preventDefault();
+      fin.focus();
+    } else if (!e.shiftKey && document.activeElement === fin) {
+      e.preventDefault();
+      inicio.focus();
+    }
+  };
+  document.addEventListener("keydown", onTecla);
+
+  return function desactivar() {
+    document.removeEventListener("keydown", onTecla);
+    if (disparador instanceof HTMLElement) disparador.focus({ preventScroll: true });
+  };
+}
+
+let desactivarAccesibilidadDetalle = null;
+
 export async function abrirDetalle(id) {
+  const yaEstabaAbierta = !hojaDetalle.hidden;
   cerrarFormulario();
   cerrarInfo();
   salirModoAñadir();
@@ -326,12 +378,19 @@ export async function abrirDetalle(id) {
   detalleBtnEliminar.hidden = true;
 
   hojaDetalle.hidden = false;
+  if (!yaEstabaAbierta) {
+    desactivarAccesibilidadDetalle = activarAccesibilidadHoja(hojaDetalle, cerrarDetalle);
+  }
   await cargarDetalle(id);
 }
 
 export function cerrarDetalle() {
   hojaDetalle.hidden = true;
   idDetalleActual = null;
+  if (desactivarAccesibilidadDetalle) {
+    desactivarAccesibilidadDetalle();
+    desactivarAccesibilidadDetalle = null;
+  }
 }
 
 btnCerrarDetalle.addEventListener("click", cerrarDetalle);
@@ -340,8 +399,14 @@ btnCerrarDetalle.addEventListener("click", cerrarDetalle);
 const hojaInfo = document.getElementById("hoja-info");
 const btnCerrarInfo = document.getElementById("btn-cerrar-info");
 
+let desactivarAccesibilidadInfo = null;
+
 export function cerrarInfo() {
   hojaInfo.hidden = true;
+  if (desactivarAccesibilidadInfo) {
+    desactivarAccesibilidadInfo();
+    desactivarAccesibilidadInfo = null;
+  }
 }
 
 btnCerrarInfo.addEventListener("click", cerrarInfo);
@@ -360,6 +425,7 @@ const BotonInfo = L.Control.extend({
       cerrarFormulario();
       if (alAbrirDetalleOFormulario) alAbrirDetalleOFormulario();
       hojaInfo.hidden = false;
+      desactivarAccesibilidadInfo = activarAccesibilidadHoja(hojaInfo, cerrarInfo);
     });
     return btn;
   },
@@ -641,8 +707,14 @@ function elegirMotivoReporte() {
     // Se oculta la ficha del baño mientras se elige el motivo: al ser las
     // dos hojas de altura distinta y ambas fijas al borde inferior, tenerlas
     // abiertas a la vez dejaba la cabecera de la ficha asomando por encima
-    // (muy visible en pantallas de móvil, con menos alto disponible).
+    // (muy visible en pantallas de móvil, con menos alto disponible). Como
+    // esto oculta hojaDetalle sin pasar por cerrarDetalle(), su atrapa-foco
+    // se desactiva y reactiva aquí a mano para que no queden dos a la vez.
     hojaDetalle.hidden = true;
+    if (desactivarAccesibilidadDetalle) {
+      desactivarAccesibilidadDetalle();
+      desactivarAccesibilidadDetalle = null;
+    }
     hojaMotivoReporte.hidden = false;
     motivoComentario.value = "";
     btnEnviarMotivo.disabled = true;
@@ -652,7 +724,9 @@ function elegirMotivoReporte() {
 
     const limpiar = (resultado) => {
       hojaMotivoReporte.hidden = true;
+      desactivarAccesibilidadMotivo();
       hojaDetalle.hidden = false;
+      desactivarAccesibilidadDetalle = activarAccesibilidadHoja(hojaDetalle, cerrarDetalle);
       botones.forEach((b) => b.removeEventListener("click", onClickMotivo));
       btnEnviarMotivo.removeEventListener("click", onEnviar);
       btnCancelarMotivo.removeEventListener("click", onCancelar);
@@ -668,6 +742,7 @@ function elegirMotivoReporte() {
       limpiar({ motivo: motivoSeleccionado, comentario: motivoComentario.value.trim() });
     };
     const onCancelar = () => limpiar(null);
+    const desactivarAccesibilidadMotivo = activarAccesibilidadHoja(hojaMotivoReporte, onCancelar);
 
     botones.forEach((b) => b.addEventListener("click", onClickMotivo));
     btnEnviarMotivo.addEventListener("click", onEnviar);
@@ -756,7 +831,10 @@ btnUsarUbicacion.addEventListener("click", () => {
   );
 });
 
+let desactivarAccesibilidadFormulario = null;
+
 function abrirFormulario(latlng) {
+  const yaEstabaAbierta = !hojaFormulario.hidden;
   salirModoAñadir();
   cerrarInfo();
   modoEdicionId = null;
@@ -782,9 +860,13 @@ function abrirFormulario(latlng) {
   formLavabo.reset();
   if (prepararSelectorIcono) prepararSelectorIcono(null);
   hojaFormulario.hidden = false;
+  if (!yaEstabaAbierta) {
+    desactivarAccesibilidadFormulario = activarAccesibilidadHoja(hojaFormulario, cerrarFormulario);
+  }
 }
 
 export async function abrirFormularioEdicion(id) {
+  const yaEstabaAbierta = !hojaFormulario.hidden;
   let datos = datosLavabos.get(id) || (ultimoDetalleCargado && String(ultimoDetalleCargado.id) === id ? ultimoDetalleCargado : null);
   if (!datos) {
     // Ej: un baño oculto abierto para editar directamente desde el panel de
@@ -828,6 +910,9 @@ export async function abrirFormularioEdicion(id) {
   formLavabo.elements["descripcion"].value = datos.descripcion || "";
   if (prepararSelectorIcono) prepararSelectorIcono(datos);
   hojaFormulario.hidden = false;
+  if (!yaEstabaAbierta) {
+    desactivarAccesibilidadFormulario = activarAccesibilidadHoja(hojaFormulario, cerrarFormulario);
+  }
 }
 
 export function cerrarFormulario() {
@@ -836,6 +921,10 @@ export function cerrarFormulario() {
   if (marcadorTemporal) {
     map.removeLayer(marcadorTemporal);
     marcadorTemporal = null;
+  }
+  if (desactivarAccesibilidadFormulario) {
+    desactivarAccesibilidadFormulario();
+    desactivarAccesibilidadFormulario = null;
   }
 }
 

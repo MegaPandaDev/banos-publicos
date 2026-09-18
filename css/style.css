@@ -853,7 +853,7 @@ textarea {
   flex-shrink: 0;
 }
 
-/* Aviso flotante modo añadir */
+/* Aviso flotante modo añadir / carga inicial */
 .aviso-flotante {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0) + 74px);
@@ -869,6 +869,24 @@ textarea {
   max-width: 90%;
   text-align: center;
   animation: entrada-chip 0.3s var(--curva-salida);
+}
+
+.spinner-cargando {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-right: 0.4em;
+  vertical-align: -0.13em;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: girar-spinner 0.7s linear infinite;
+}
+
+@keyframes girar-spinner {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Botón flotante añadir */
@@ -1166,6 +1184,10 @@ body.con-anuncio .leaflet-bottom {
 
   .aviso-actualizacion,
   .aviso-flotante {
+    animation: none;
+  }
+
+  .spinner-cargando {
     animation: none;
   }
 }

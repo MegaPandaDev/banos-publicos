@@ -89,6 +89,20 @@
           ></textarea>
         </label>
 
+        {% if es_moderador %}
+        <div id="campo-icono-moderador" class="campo-icono-moderador" hidden>
+          <label>
+            Icono en el mapa
+            <select id="select-icono-moderador">
+              <option value="">Automático</option>
+              <option value="sistema">Blanco (sistema)</option>
+              <option value="usuario">Azul (usuario)</option>
+              <option value="pago">Amarillo (de pago)</option>
+            </select>
+          </label>
+        </div>
+        {% endif %}
+
         <button type="button" id="btn-usar-ubicacion" class="btn-secundario">
           <img src="icons/ubicacion.svg" class="icono-boton" alt="" />
           Usar mi ubicación actual

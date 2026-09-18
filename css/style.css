@@ -896,7 +896,8 @@ body.con-anuncio .leaflet-bottom {
 }
 
 .hoja input,
-.hoja textarea {
+.hoja textarea,
+.hoja select {
   display: block;
   width: 100%;
   margin-top: 0.35rem;
@@ -906,12 +907,22 @@ body.con-anuncio .leaflet-bottom {
   font-size: 1rem;
   font-family: inherit;
   resize: vertical;
+  background: var(--color-superficie);
 }
 
 .hoja input:focus,
-.hoja textarea:focus {
+.hoja textarea:focus,
+.hoja select:focus {
   outline: 2px solid var(--color-primario);
   outline-offset: 1px;
+}
+
+.campo-icono-moderador {
+  margin-bottom: 0.9rem;
+}
+
+.campo-icono-moderador label {
+  margin-bottom: 0;
 }
 
 .btn-secundario {

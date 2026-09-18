@@ -19,6 +19,7 @@ UMBRAL_REPORTES = 3
 COOKIE_VISITANTE = "visitante_id"
 MENSAJE_ROBOT = "No se ha podido verificar que no eres un robot. Recarga la página e inténtalo de nuevo."
 MOTIVOS_REPORTE = {"no_existe", "cerrado", "informacion_incorrecta", "otro"}
+TIPOS_ICONO = {"sistema", "usuario", "pago"}
 
 # Identificadores "del sistema" (tú o yo) de antes de que existiera MODERADOR_ID:
 # el UID de Firebase del moderador previo a la migración, y la sesión usada para
@@ -71,6 +72,18 @@ def es_sistema(creado_por: str) -> bool:
 
 def es_de_pago(descripcion: str) -> bool:
     return "de pago" in (descripcion or "").lower()
+
+
+def calcular_tipo_icono(icono_manual: str | None, descripcion: str, creado_por: str) -> str:
+    # El moderador puede forzar un icono concreto desde el panel de editar;
+    # si no hay override, se usa la clasificación automática de siempre.
+    if icono_manual in TIPOS_ICONO:
+        return icono_manual
+    if es_de_pago(descripcion):
+        return "pago"
+    if es_sistema(creado_por):
+        return "sistema"
+    return "usuario"
 
 
 def validar_lavabo(datos: dict):
@@ -145,7 +158,7 @@ def api_yo():
 def listar_banos():
     with conectar() as con, con.cursor() as cur:
         cur.execute(
-            "SELECT id, nombre, descripcion, lat, lng, creado_por FROM banos WHERE oculto = false ORDER BY id"
+            "SELECT id, nombre, descripcion, lat, lng, creado_por, icono FROM banos WHERE oculto = false ORDER BY id"
         )
         filas = cur.fetchall()
     return jsonify(
@@ -156,8 +169,8 @@ def listar_banos():
                 "descripcion": f["descripcion"],
                 "lat": f["lat"],
                 "lng": f["lng"],
-                "dePago": es_de_pago(f["descripcion"]),
-                "esSistema": es_sistema(f["creado_por"]),
+                "icono": f["icono"],
+                "tipoIcono": calcular_tipo_icono(f["icono"], f["descripcion"], f["creado_por"]),
             }
             for f in filas
         ]
@@ -186,8 +199,8 @@ def crear_bano():
     return jsonify(
         {
             "id": nuevo_id,
-            "dePago": es_de_pago(datos["descripcion"]),
-            "esSistema": es_sistema(g.visitante_id),
+            "icono": None,
+            "tipoIcono": calcular_tipo_icono(None, datos["descripcion"], g.visitante_id),
         }
     )
 
@@ -223,6 +236,8 @@ def detalle_bano(bano_id):
             "descripcion": bano["descripcion"],
             "lat": bano["lat"],
             "lng": bano["lng"],
+            "icono": bano["icono"],
+            "tipoIcono": calcular_tipo_icono(bano["icono"], bano["descripcion"], bano["creado_por"]),
             "promedio": (sum(estrellas) / total) if total else 0,
             "totalValoraciones": total,
             "miValoracion": mia["estrellas"] if mia else 0,
@@ -244,17 +259,31 @@ def detalle_bano(bano_id):
 def editar_bano(bano_id):
     if not es_moderador(g.visitante_id):
         return jsonify({"error": "No autorizado."}), 403
-    datos, error = validar_lavabo(request.get_json(force=True, silent=True) or {})
+    cuerpo = request.get_json(force=True, silent=True) or {}
+    datos, error = validar_lavabo(cuerpo)
     if error:
         return jsonify({"error": error}), 400
+
+    icono = cuerpo.get("icono") or None
+    if icono is not None and icono not in TIPOS_ICONO:
+        return jsonify({"error": "El icono no es válido."}), 400
+
     with conectar() as con, con.cursor() as cur:
         cur.execute(
             """UPDATE banos SET nombre=%(nombre)s, descripcion=%(descripcion)s,
-               lat=%(lat)s, lng=%(lng)s WHERE id=%(id)s""",
-            {**datos, "id": bano_id},
+               lat=%(lat)s, lng=%(lng)s, icono=%(icono)s WHERE id=%(id)s
+               RETURNING creado_por""",
+            {**datos, "icono": icono, "id": bano_id},
         )
+        fila = cur.fetchone()
         con.commit()
-    return jsonify({"ok": True, "dePago": es_de_pago(datos["descripcion"])})
+    return jsonify(
+        {
+            "ok": True,
+            "icono": icono,
+            "tipoIcono": calcular_tipo_icono(icono, datos["descripcion"], fila["creado_por"]),
+        }
+    )
 
 
 @app.route("/api/banos/<int:bano_id>", methods=["DELETE"])

@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS banos (
     reportes INTEGER NOT NULL DEFAULT 0,
     oculto BOOLEAN NOT NULL DEFAULT FALSE,
     creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
-    creado_por TEXT NOT NULL
+    creado_por TEXT NOT NULL,
+    icono TEXT CHECK (icono IN ('sistema', 'usuario', 'pago'))
 );
 
 CREATE TABLE IF NOT EXISTS reportes (

@@ -129,8 +129,8 @@ const iconoUsuario = crearIconoLavabo("marcador-wc-usuario.svg");
 const iconoPago = crearIconoLavabo("marcador-wc-pago.svg");
 
 function elegirIcono(datos) {
-  if (datos.dePago) return iconoPago;
-  if (datos.esSistema) return iconoSistema;
+  if (datos.tipoIcono === "pago") return iconoPago;
+  if (datos.tipoIcono === "sistema") return iconoSistema;
   return iconoUsuario;
 }
 
@@ -290,6 +290,19 @@ let idDetalleActual = null;
 let alAbrirDetalleOFormulario = null;
 export function registrarCerradorModeracion(fn) {
   alAbrirDetalleOFormulario = fn;
+}
+
+// Hooks opcionales para el selector de icono manual del formulario (solo
+// para el moderador, ver js/moderacion.js). "prepararSelectorIcono" se llama
+// con los datos del baño al editar (o null al añadir uno nuevo, para
+// ocultarlo); "obtenerIconoSeleccionado" se consulta al guardar una edición.
+let prepararSelectorIcono = null;
+export function registrarSelectorIcono(fn) {
+  prepararSelectorIcono = fn;
+}
+let obtenerIconoSeleccionado = null;
+export function registrarObtenerIconoSeleccionado(fn) {
+  obtenerIconoSeleccionado = fn;
 }
 
 export async function abrirDetalle(id) {
@@ -726,6 +739,7 @@ function abrirFormulario(latlng) {
   });
 
   formLavabo.reset();
+  if (prepararSelectorIcono) prepararSelectorIcono(null);
   hojaFormulario.hidden = false;
 }
 
@@ -770,6 +784,7 @@ export async function abrirFormularioEdicion(id) {
   formLavabo.reset();
   formLavabo.elements["nombre"].value = datos.nombre || "";
   formLavabo.elements["descripcion"].value = datos.descripcion || "";
+  if (prepararSelectorIcono) prepararSelectorIcono(datos);
   hojaFormulario.hidden = false;
 }
 
@@ -798,19 +813,20 @@ formLavabo.addEventListener("submit", async (e) => {
   btnGuardar.disabled = true;
   try {
     if (modoEdicionId) {
+      const cuerpo = { nombre, descripcion, lat, lng };
+      if (obtenerIconoSeleccionado) cuerpo.icono = obtenerIconoSeleccionado();
       const resultado = await peticionJSON(`/api/banos/${modoEdicionId}`, {
         method: "PUT",
-        body: JSON.stringify({ nombre, descripcion, lat, lng }),
+        body: JSON.stringify(cuerpo),
       });
-      const datosPrevios = datosLavabos.get(modoEdicionId);
       añadirOActualizarMarcador({
         id: modoEdicionId,
         nombre,
         descripcion,
         lat,
         lng,
-        dePago: resultado.dePago,
-        esSistema: datosPrevios ? datosPrevios.esSistema : false,
+        icono: resultado.icono,
+        tipoIcono: resultado.tipoIcono,
       });
       mostrarToast("Baño actualizado.", "success");
     } else {
@@ -825,8 +841,8 @@ formLavabo.addEventListener("submit", async (e) => {
         descripcion,
         lat,
         lng,
-        dePago: resultado.dePago,
-        esSistema: resultado.esSistema,
+        icono: resultado.icono,
+        tipoIcono: resultado.tipoIcono,
       });
       mostrarToast("¡Gracias! El baño se ha añadido al mapa.", "success");
     }

@@ -11,6 +11,8 @@ import {
   cerrarDetalle,
   cerrarFormulario,
   registrarCerradorModeracion,
+  registrarSelectorIcono,
+  registrarObtenerIconoSeleccionado,
   INTERVALO_SONDEO_MS,
 } from "./app.js";
 
@@ -28,8 +30,24 @@ const hojaModeracion = document.getElementById("hoja-moderacion");
 const btnCerrarModeracion = document.getElementById("btn-cerrar-moderacion");
 const listaModeracionReportados = document.getElementById("lista-moderacion-reportados");
 const listaModeracionNuevos = document.getElementById("lista-moderacion-nuevos");
+const campoIconoModerador = document.getElementById("campo-icono-moderador");
+const selectIconoModerador = document.getElementById("select-icono-moderador");
 
 registrarCerradorModeracion(cerrarModeracion);
+
+// El selector de icono manual solo tiene sentido al editar un baño ya
+// existente (no al añadir uno nuevo): se oculta y se resetea a "Automático"
+// en ese caso, y se rellena con el valor guardado al editar.
+registrarSelectorIcono((datos) => {
+  if (!datos) {
+    campoIconoModerador.hidden = true;
+    selectIconoModerador.value = "";
+    return;
+  }
+  campoIconoModerador.hidden = false;
+  selectIconoModerador.value = datos.icono || "";
+});
+registrarObtenerIconoSeleccionado(() => selectIconoModerador.value);
 
 actualizarContadorModeracion();
 setInterval(actualizarContadorModeracion, INTERVALO_SONDEO_MS);

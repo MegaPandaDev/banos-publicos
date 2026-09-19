@@ -17,6 +17,7 @@
   --color-boton-cancelar: #e5e7eb;
   --sombra: 0 2px 10px rgba(0, 0, 0, 0.15);
   --altura-anuncio: 50px;
+  --altura-pie: 30px;
   --fuente-cuerpo: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --fuente-display: "Fredoka", var(--fuente-cuerpo);
   --radio-s: 10px;
@@ -107,6 +108,13 @@ textarea {
   opacity: 0.85;
 }
 
+.enlace-autor {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+  text-underline-offset: 2px;
+}
+
 .icono-marca {
   height: 1.5em;
   width: auto;
@@ -184,7 +192,7 @@ textarea {
   position: fixed;
   left: 0.75rem;
   right: 0.75rem;
-  bottom: 0.75rem;
+  bottom: calc(var(--altura-pie) + 0.75rem);
   background: var(--color-superficie);
   border-radius: var(--radio-m);
   box-shadow: var(--sombra);
@@ -331,6 +339,45 @@ textarea {
   flex: 1 1 auto;
   width: 100%;
   min-height: 0;
+}
+
+.pie {
+  flex: 0 0 auto;
+  height: calc(var(--altura-pie) + env(safe-area-inset-bottom, 0));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--color-superficie);
+  border-top: 1px solid var(--color-borde);
+  font-size: 0.72rem;
+  color: var(--color-texto-tenue);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  position: relative;
+  z-index: 10;
+}
+
+/* Cuando hay un anuncio real visible (fijo al fondo de la pantalla, ver
+   body.con-anuncio en app.js), el pie sube ese hueco: al ser flex el propio
+   mapa se encoge para dejárselo, así los controles de Leaflet (que se anclan
+   al propio contenedor del mapa) ya quedan bien colocados sin más ajustes. */
+body.con-anuncio .pie {
+  margin-bottom: calc(var(--altura-anuncio) + env(safe-area-inset-bottom, 0));
+}
+
+.enlace-pie {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-texto-tenue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.pie-separador {
+  opacity: 0.6;
 }
 
 #map.modo-añadir {
@@ -909,7 +956,7 @@ textarea {
 .fab {
   position: fixed;
   left: 1rem;
-  bottom: calc(env(safe-area-inset-bottom, 0) + 1.25rem);
+  bottom: calc(env(safe-area-inset-bottom, 0) + var(--altura-pie) + 1.25rem);
   width: 60px;
   height: 60px;
   border-radius: 50%;
@@ -963,15 +1010,11 @@ textarea {
 /* Cuando hay un anuncio real visible (ver body.con-anuncio en app.js), se sube
    el botón "+" y el aviso de cookies para que no queden tapados por la barra. */
 body.con-anuncio .fab {
-  bottom: calc(env(safe-area-inset-bottom, 0) + var(--altura-anuncio) + 1.25rem);
+  bottom: calc(env(safe-area-inset-bottom, 0) + var(--altura-pie) + var(--altura-anuncio) + 1.25rem);
 }
 
 body.con-anuncio .aviso-cookies {
-  bottom: calc(var(--altura-anuncio) + 0.75rem);
-}
-
-body.con-anuncio .leaflet-bottom {
-  bottom: var(--altura-anuncio);
+  bottom: calc(var(--altura-pie) + var(--altura-anuncio) + 0.75rem);
 }
 
 /* Hoja de formulario (bottom sheet) */
@@ -1204,7 +1247,7 @@ body.con-anuncio .leaflet-bottom {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(env(safe-area-inset-bottom, 0) + 6.5rem);
+  bottom: calc(env(safe-area-inset-bottom, 0) + var(--altura-pie) + 6.5rem);
   transform: translateX(-50%) translateY(16px);
   background: var(--color-chip);
   color: white;

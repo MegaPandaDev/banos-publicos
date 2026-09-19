@@ -468,6 +468,15 @@ export function cerrarInfo() {
 
 btnCerrarInfo.addEventListener("click", cerrarInfo);
 
+function abrirInfo() {
+  cerrarDetalle();
+  cerrarFormulario();
+  cerrarFiltro();
+  if (alAbrirDetalleOFormulario) alAbrirDetalleOFormulario();
+  hojaInfo.hidden = false;
+  desactivarAccesibilidadInfo = activarAccesibilidadHoja(hojaInfo, cerrarInfo);
+}
+
 const BotonInfo = L.Control.extend({
   options: { position: "topleft" },
   onAdd() {
@@ -477,17 +486,12 @@ const BotonInfo = L.Control.extend({
     btn.setAttribute("aria-label", btn.title);
     btn.textContent = "?";
     L.DomEvent.disableClickPropagation(btn);
-    btn.addEventListener("click", () => {
-      cerrarDetalle();
-      cerrarFormulario();
-      cerrarFiltro();
-      if (alAbrirDetalleOFormulario) alAbrirDetalleOFormulario();
-      hojaInfo.hidden = false;
-      desactivarAccesibilidadInfo = activarAccesibilidadHoja(hojaInfo, cerrarInfo);
-    });
+    btn.addEventListener("click", abrirInfo);
     return btn;
   },
 });
+
+document.getElementById("btn-pie-acerca").addEventListener("click", abrirInfo);
 map.addControl(new BotonInfo());
 
 // --- Filtrar baños por etiquetas ---

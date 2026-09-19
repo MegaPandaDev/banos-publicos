@@ -7,6 +7,8 @@
     <meta name="description" content="Encuentra y comparte lavabos públicos cerca de ti" />
     <meta name="theme-color" content="#0d9488" />
     <meta name="google-adsense-account" content="ca-pub-7951552027568533" />
+    <link rel="canonical" href="https://banos-publicos.onrender.com/" />
+    <link rel="privacy-policy" href="privacidad.html" />
 
     <meta property="og:title" content="Meaquí" />
     <meta property="og:description" content="Encuentra y comparte lavabos públicos cerca de ti" />
@@ -38,7 +40,13 @@
     <header class="cabecera">
       <h1>
         <img src="icons/wc.svg" class="icono-marca" alt="" />
-        Meaquí <span class="marca-autor">by MegaPandaDev</span>
+        Meaquí
+        <span class="marca-autor"
+          >by
+          <a href="https://www.megapandadev.com" target="_blank" rel="noopener" class="enlace-autor"
+            >MegaPandaDev</a
+          ></span
+        >
       </h1>
       {% if es_moderador %}
       <button type="button" id="btn-moderacion" class="btn-moderacion">
@@ -57,6 +65,16 @@
     </header>
 
     <div id="map"></div>
+
+    <footer class="pie">
+      <button type="button" id="btn-pie-acerca" class="enlace-pie">Acerca de</button>
+      <span class="pie-separador" aria-hidden="true">·</span>
+      <a class="enlace-pie" href="privacidad.html">Privacidad</a>
+      <span class="pie-separador" aria-hidden="true">·</span>
+      <a class="enlace-pie" href="https://github.com/MegaPandaDev/banos-publicos" target="_blank" rel="noopener"
+        >Código en GitHub</a
+      >
+    </footer>
 
     <p id="aviso-cargando" class="aviso-flotante">
       <span class="spinner-cargando" aria-hidden="true"></span>
@@ -192,7 +210,19 @@
         <img src="icons/cruz.svg" class="icono-cerrar" alt="" />
       </button>
 
-      <h2>Sobre este mapa</h2>
+      <h2>Sobre Meaquí</h2>
+      <p>
+        Meaquí es un mapa colaborativo y gratuito de baños públicos en Madrid. La idea es
+        sencilla: encontrar un baño cuando lo necesitas no debería ser complicado, así que
+        aquí puedes buscar los más cercanos y, si conoces uno que falta, añadirlo tú mismo
+        en un par de toques.
+      </p>
+      <p>
+        Parte del mapa se ha completado con datos abiertos de OpenStreetMap, y el resto lo
+        va ampliando la comunidad: cualquiera puede añadir un baño, ponerle etiquetas
+        (ubicación, precio, accesibilidad...), valorarlo o reportarlo si ya no existe o la
+        información es incorrecta. No hace falta registrarse para nada de esto.
+      </p>
       <p>
         No hemos podido verificar todas las ubicaciones y algunas pueden ser incorrectas.
         ¡Os animamos a que reportéis cualquier error que veáis, para hacer de esta app una
@@ -214,6 +244,19 @@
           <span>Baño de pago</span>
         </div>
       </div>
+
+      <p class="detalle-subtitulo">¿Quién hay detrás?</p>
+      <p>
+        Meaquí lo mantiene
+        <a href="https://www.megapandadev.com" target="_blank" rel="noopener">MegaPandaDev</a>
+        como proyecto personal y de código abierto, sin ánimo de lucro más allá de las
+        donaciones voluntarias. Puedes ver o contribuir al código en
+        <a href="https://github.com/MegaPandaDev/banos-publicos" target="_blank" rel="noopener"
+          >GitHub</a
+        >, y ahí mismo abrir un issue si quieres contactar, reportar un fallo o proponer una
+        mejora. Más detalles sobre qué datos se guardan en la
+        <a href="privacidad.html" target="_blank" rel="noopener">política de privacidad</a>.
+      </p>
     </div>
 
     <div id="hoja-filtro" class="hoja" hidden>

@@ -11,7 +11,14 @@ CREATE TABLE IF NOT EXISTS banos (
     oculto BOOLEAN NOT NULL DEFAULT FALSE,
     creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
     creado_por TEXT NOT NULL,
-    icono TEXT CHECK (icono IN ('sistema', 'usuario', 'pago'))
+    icono TEXT CHECK (icono IN ('sistema', 'usuario', 'pago')),
+    etiquetas TEXT[] NOT NULL DEFAULT '{}' CHECK (
+        etiquetas <@ ARRAY[
+            'a_pie_de_calle', 'en_parque', 'en_centro_comercial',
+            'gratis', 'de_pago', 'precio_desconocido',
+            'cambiador_bebes', 'accesible_silla_ruedas'
+        ]::text[]
+    )
 );
 
 CREATE TABLE IF NOT EXISTS reportes (

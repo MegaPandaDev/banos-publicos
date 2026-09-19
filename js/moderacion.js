@@ -11,6 +11,7 @@ import {
   cerrarDetalle,
   cerrarFormulario,
   cerrarInfo,
+  cerrarFiltro,
   modalOverlay,
   activarAccesibilidadHoja,
   registrarCerradorModeracion,
@@ -94,6 +95,7 @@ btnModeracion.addEventListener("click", async () => {
   cerrarDetalle();
   cerrarFormulario();
   cerrarInfo();
+  cerrarFiltro();
   hojaModeracion.hidden = false;
   desactivarAccesibilidadModeracion = activarAccesibilidadHoja(hojaModeracion, cerrarModeracion);
   listaModeracionReportados.innerHTML = "";

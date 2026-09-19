@@ -4,6 +4,19 @@ const CENTRO_POR_DEFECTO = [40.4168, -3.7038]; // Madrid, por si no hay geolocal
 const ZOOM_POR_DEFECTO = 6;
 export const INTERVALO_SONDEO_MS = 30000;
 
+// Etiquetas que se pueden asignar a un baño (ver también CATEGORIAS_ETIQUETAS
+// en app.py, que es quien las valida de verdad al guardar).
+const ETIQUETAS_TEXTO = {
+  a_pie_de_calle: "A pie de calle",
+  en_parque: "En un parque",
+  en_centro_comercial: "En un centro comercial",
+  gratis: "Gratis",
+  de_pago: "De pago",
+  precio_desconocido: "Precio desconocido",
+  cambiador_bebes: "Cambiador de bebés",
+  accesible_silla_ruedas: "Accesible en silla de ruedas",
+};
+
 // --- Peticiones al servidor propio (app.py) ---
 export async function peticionJSON(url, opciones = {}) {
   const resp = await fetch(url, {
@@ -237,6 +250,7 @@ function añadirOActualizarMarcador(datos) {
     grupoMarcadores.addLayer(marcador);
     marcadores.set(id, marcador);
   }
+  actualizarVisibilidadMarcador(id);
 }
 
 async function cargarBanos() {
@@ -274,11 +288,40 @@ async function cargarBanos() {
 cargarBanos();
 setInterval(cargarBanos, INTERVALO_SONDEO_MS);
 
+// --- Selector de etiquetas (compartido por el formulario y el filtro) ---
+// Cada botón es un simple interruptor; los grupos marcados como
+// data-exclusivo="true" (ubicación, precio) admiten como mucho uno activo a
+// la vez, como botones de radio, y el resto (comodidades) admite varios.
+function inicializarSelectorEtiquetas(contenedor) {
+  contenedor.querySelectorAll(".etiqueta-boton").forEach((boton) => {
+    boton.addEventListener("click", () => {
+      const grupo = boton.closest(".etiquetas-grupo");
+      const yaActivo = boton.classList.contains("activo");
+      if (grupo && grupo.dataset.exclusivo === "true") {
+        grupo.querySelectorAll(".etiqueta-boton").forEach((b) => b.classList.remove("activo"));
+      }
+      boton.classList.toggle("activo", !yaActivo);
+    });
+  });
+}
+
+function obtenerEtiquetasSeleccionadas(contenedor) {
+  return Array.from(contenedor.querySelectorAll(".etiqueta-boton.activo")).map((b) => b.dataset.etiqueta);
+}
+
+function establecerEtiquetasSeleccionadas(contenedor, etiquetas) {
+  const activas = new Set(etiquetas || []);
+  contenedor.querySelectorAll(".etiqueta-boton").forEach((b) => {
+    b.classList.toggle("activo", activas.has(b.dataset.etiqueta));
+  });
+}
+
 // --- Hoja de detalle: valoraciones y comentarios ---
 const hojaDetalle = document.getElementById("hoja-detalle");
 const btnCerrarDetalle = document.getElementById("btn-cerrar-detalle");
 const detalleNombre = document.getElementById("detalle-nombre");
 const detalleDescripcion = document.getElementById("detalle-descripcion");
+const detalleEtiquetas = document.getElementById("detalle-etiquetas");
 const detalleBtnLlegar = document.getElementById("detalle-btn-llegar");
 const detalleBtnReportar = document.getElementById("detalle-btn-reportar");
 const detalleBtnEditar = document.getElementById("detalle-btn-editar");
@@ -356,10 +399,23 @@ export function activarAccesibilidadHoja(hoja, alPulsarEscape) {
 
 let desactivarAccesibilidadDetalle = null;
 
+function renderizarEtiquetasDetalle(etiquetas) {
+  if (!etiquetas || etiquetas.length === 0) {
+    detalleEtiquetas.innerHTML = "";
+    detalleEtiquetas.hidden = true;
+    return;
+  }
+  detalleEtiquetas.hidden = false;
+  detalleEtiquetas.innerHTML = etiquetas
+    .map((e) => `<span class="etiqueta-chip">${escaparHTML(ETIQUETAS_TEXTO[e] || e)}</span>`)
+    .join("");
+}
+
 export async function abrirDetalle(id) {
   const yaEstabaAbierta = !hojaDetalle.hidden;
   cerrarFormulario();
   cerrarInfo();
+  cerrarFiltro();
   salirModoAñadir();
   if (alAbrirDetalleOFormulario) alAbrirDetalleOFormulario();
   idDetalleActual = id;
@@ -370,6 +426,7 @@ export async function abrirDetalle(id) {
   const datosBasicos = datosLavabos.get(id);
   detalleNombre.textContent = datosBasicos ? datosBasicos.nombre || "Baño público" : "";
   detalleDescripcion.textContent = datosBasicos ? datosBasicos.descripcion || "Sin instrucciones adicionales." : "";
+  renderizarEtiquetasDetalle(datosBasicos ? datosBasicos.etiquetas : []);
   if (datosBasicos) {
     detalleBtnLlegar.dataset.lat = datosBasicos.lat;
     detalleBtnLlegar.dataset.lng = datosBasicos.lng;
@@ -423,6 +480,7 @@ const BotonInfo = L.Control.extend({
     btn.addEventListener("click", () => {
       cerrarDetalle();
       cerrarFormulario();
+      cerrarFiltro();
       if (alAbrirDetalleOFormulario) alAbrirDetalleOFormulario();
       hojaInfo.hidden = false;
       desactivarAccesibilidadInfo = activarAccesibilidadHoja(hojaInfo, cerrarInfo);
@@ -431,6 +489,88 @@ const BotonInfo = L.Control.extend({
   },
 });
 map.addControl(new BotonInfo());
+
+// --- Filtrar baños por etiquetas ---
+const hojaFiltro = document.getElementById("hoja-filtro");
+const btnCerrarFiltro = document.getElementById("btn-cerrar-filtro");
+const btnLimpiarFiltro = document.getElementById("btn-limpiar-filtro");
+inicializarSelectorEtiquetas(hojaFiltro);
+
+let desactivarAccesibilidadFiltro = null;
+let etiquetasFiltroActivas = [];
+let contadorFiltro = null; // se crea al construir el botón del mapa
+
+function marcadorCumpleFiltro(datos) {
+  return etiquetasFiltroActivas.every((e) => (datos.etiquetas || []).includes(e));
+}
+
+function actualizarVisibilidadMarcador(id) {
+  const marcador = marcadores.get(id);
+  const datos = datosLavabos.get(id);
+  if (!marcador || !datos) return;
+  const debeVerse = marcadorCumpleFiltro(datos);
+  const visible = grupoMarcadores.hasLayer(marcador);
+  if (debeVerse && !visible) grupoMarcadores.addLayer(marcador);
+  if (!debeVerse && visible) grupoMarcadores.removeLayer(marcador);
+}
+
+function aplicarFiltroATodos() {
+  for (const id of marcadores.keys()) actualizarVisibilidadMarcador(id);
+}
+
+function actualizarBadgeFiltro() {
+  if (!contadorFiltro) return;
+  contadorFiltro.textContent = String(etiquetasFiltroActivas.length);
+  contadorFiltro.hidden = etiquetasFiltroActivas.length === 0;
+}
+
+function alCambiarFiltro() {
+  etiquetasFiltroActivas = obtenerEtiquetasSeleccionadas(hojaFiltro);
+  aplicarFiltroATodos();
+  actualizarBadgeFiltro();
+}
+hojaFiltro.querySelectorAll(".etiqueta-boton").forEach((b) => b.addEventListener("click", alCambiarFiltro));
+
+btnLimpiarFiltro.addEventListener("click", () => {
+  establecerEtiquetasSeleccionadas(hojaFiltro, []);
+  alCambiarFiltro();
+});
+
+export function cerrarFiltro() {
+  hojaFiltro.hidden = true;
+  if (desactivarAccesibilidadFiltro) {
+    desactivarAccesibilidadFiltro();
+    desactivarAccesibilidadFiltro = null;
+  }
+}
+
+btnCerrarFiltro.addEventListener("click", cerrarFiltro);
+
+const BotonFiltro = L.Control.extend({
+  options: { position: "topleft" },
+  onAdd() {
+    const btn = L.DomUtil.create("button", "boton-mapa boton-filtro");
+    btn.type = "button";
+    btn.title = "Filtrar por etiquetas";
+    btn.setAttribute("aria-label", btn.title);
+    btn.innerHTML = '<span aria-hidden="true">🏷️</span>';
+    contadorFiltro = document.createElement("span");
+    contadorFiltro.className = "contador-moderacion";
+    contadorFiltro.hidden = true;
+    btn.appendChild(contadorFiltro);
+    L.DomEvent.disableClickPropagation(btn);
+    btn.addEventListener("click", () => {
+      cerrarDetalle();
+      cerrarFormulario();
+      cerrarInfo();
+      if (alAbrirDetalleOFormulario) alAbrirDetalleOFormulario();
+      hojaFiltro.hidden = false;
+      desactivarAccesibilidadFiltro = activarAccesibilidadHoja(hojaFiltro, cerrarFiltro);
+    });
+    return btn;
+  },
+});
+map.addControl(new BotonFiltro());
 
 detalleBtnLlegar.addEventListener("click", (e) => {
   const { lat, lng } = e.currentTarget.dataset;
@@ -479,6 +619,7 @@ async function cargarDetalle(id) {
     ultimoDetalleCargado = detalle;
     detalleNombre.textContent = detalle.nombre || "Baño público";
     detalleDescripcion.textContent = detalle.descripcion || "Sin instrucciones adicionales.";
+    renderizarEtiquetasDetalle(detalle.etiquetas);
     detalleBtnLlegar.dataset.lat = detalle.lat;
     detalleBtnLlegar.dataset.lng = detalle.lng;
     detalleBtnEditar.hidden = !detalle.esModerador;
@@ -791,6 +932,7 @@ const btnUsarUbicacion = document.getElementById("btn-usar-ubicacion");
 const mapaEl = document.getElementById("map");
 const formularioTitulo = document.getElementById("form-lavabo-titulo");
 const formularioBtnGuardar = formLavabo.querySelector("button[type=submit]");
+inicializarSelectorEtiquetas(formLavabo);
 
 let modoAñadir = false;
 let marcadorTemporal = null;
@@ -811,6 +953,7 @@ btnAñadir.addEventListener("click", () => {
   if (modoAñadir) {
     cerrarDetalle();
     cerrarInfo();
+    cerrarFiltro();
   }
 });
 
@@ -837,6 +980,7 @@ function abrirFormulario(latlng) {
   const yaEstabaAbierta = !hojaFormulario.hidden;
   salirModoAñadir();
   cerrarInfo();
+  cerrarFiltro();
   modoEdicionId = null;
   formularioTitulo.textContent = "Añadir baño público";
   formularioBtnGuardar.textContent = "Guardar";
@@ -858,6 +1002,7 @@ function abrirFormulario(latlng) {
   });
 
   formLavabo.reset();
+  establecerEtiquetasSeleccionadas(formLavabo, []);
   if (prepararSelectorIcono) prepararSelectorIcono(null);
   hojaFormulario.hidden = false;
   if (!yaEstabaAbierta) {
@@ -880,6 +1025,7 @@ export async function abrirFormularioEdicion(id) {
   }
 
   cerrarDetalle();
+  cerrarFiltro();
   cerrarInfo();
   if (alAbrirDetalleOFormulario) alAbrirDetalleOFormulario();
   salirModoAñadir();
@@ -908,6 +1054,7 @@ export async function abrirFormularioEdicion(id) {
   formLavabo.reset();
   formLavabo.elements["nombre"].value = datos.nombre || "";
   formLavabo.elements["descripcion"].value = datos.descripcion || "";
+  establecerEtiquetasSeleccionadas(formLavabo, datos.etiquetas);
   if (prepararSelectorIcono) prepararSelectorIcono(datos);
   hojaFormulario.hidden = false;
   if (!yaEstabaAbierta) {
@@ -937,6 +1084,7 @@ formLavabo.addEventListener("submit", async (e) => {
   const descripcion = formLavabo.elements["descripcion"].value.trim();
   const lat = parseFloat(formLavabo.dataset.lat);
   const lng = parseFloat(formLavabo.dataset.lng);
+  const etiquetas = obtenerEtiquetasSeleccionadas(formLavabo);
 
   if (!nombre || Number.isNaN(lat) || Number.isNaN(lng)) return;
 
@@ -944,7 +1092,7 @@ formLavabo.addEventListener("submit", async (e) => {
   btnGuardar.disabled = true;
   try {
     if (modoEdicionId) {
-      const cuerpo = { nombre, descripcion, lat, lng };
+      const cuerpo = { nombre, descripcion, lat, lng, etiquetas };
       if (obtenerIconoSeleccionado) cuerpo.icono = obtenerIconoSeleccionado();
       const resultado = await peticionJSON(`/api/banos/${modoEdicionId}`, {
         method: "PUT",
@@ -958,13 +1106,15 @@ formLavabo.addEventListener("submit", async (e) => {
         lng,
         icono: resultado.icono,
         tipoIcono: resultado.tipoIcono,
+        etiquetas: resultado.etiquetas,
       });
+      if (idDetalleActual === String(modoEdicionId)) renderizarEtiquetasDetalle(resultado.etiquetas);
       mostrarToast("Baño actualizado.", "success");
     } else {
       const turnstile_token = await obtenerTokenHumano();
       const resultado = await peticionJSON("/api/banos", {
         method: "POST",
-        body: JSON.stringify({ nombre, descripcion, lat, lng, turnstile_token }),
+        body: JSON.stringify({ nombre, descripcion, lat, lng, etiquetas, turnstile_token }),
       });
       añadirOActualizarMarcador({
         id: resultado.id,
@@ -974,6 +1124,7 @@ formLavabo.addEventListener("submit", async (e) => {
         lng,
         icono: resultado.icono,
         tipoIcono: resultado.tipoIcono,
+        etiquetas: resultado.etiquetas,
       });
       mostrarToast("¡Gracias! El baño se ha añadido al mapa.", "success");
     }
@@ -1064,6 +1215,7 @@ document.addEventListener(
     if (!hojaDetalle.hidden && !hojaDetalle.contains(e.target)) cerrarDetalle();
     if (!hojaFormulario.hidden && !hojaFormulario.contains(e.target)) cerrarFormulario();
     if (!hojaInfo.hidden && !hojaInfo.contains(e.target)) cerrarInfo();
+    if (!hojaFiltro.hidden && !hojaFiltro.contains(e.target)) cerrarFiltro();
     if (!hojaMotivoReporte.hidden && !hojaMotivoReporte.contains(e.target)) {
       btnCancelarMotivo.click();
     }

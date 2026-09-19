@@ -24,6 +24,19 @@ MENSAJE_ROBOT = "No se ha podido verificar que no eres un robot. Recarga la pág
 MOTIVOS_REPORTE = {"no_existe", "cerrado", "informacion_incorrecta", "otro"}
 TIPOS_ICONO = {"sistema", "usuario", "pago"}
 
+# Etiquetas que se pueden asignar a un baño al crearlo o editarlo. Se agrupan
+# por categoría para la interfaz (ver templates/index.html); "ubicacion" y
+# "precio" son excluyentes entre sí (como mucho una etiqueta de cada una),
+# "comodidades" admite varias a la vez.
+CATEGORIAS_ETIQUETAS = {
+    "ubicacion": ["a_pie_de_calle", "en_parque", "en_centro_comercial"],
+    "precio": ["gratis", "de_pago", "precio_desconocido"],
+    "comodidades": ["cambiador_bebes", "accesible_silla_ruedas"],
+}
+CATEGORIAS_ETIQUETAS_EXCLUSIVAS = {"ubicacion", "precio"}
+ETIQUETAS_VALIDAS = {e for lista in CATEGORIAS_ETIQUETAS.values() for e in lista}
+CATEGORIA_DE_ETIQUETA = {e: cat for cat, lista in CATEGORIAS_ETIQUETAS.items() for e in lista}
+
 # Identificadores "del sistema" (tú o yo) de antes de que existiera MODERADOR_ID:
 # el UID de Firebase del moderador previo a la migración, y la sesión usada para
 # importar los baños de Madrid desde OpenStreetMap. Se usan solo para decidir
@@ -127,6 +140,28 @@ def validar_lavabo(datos: dict):
     return {"nombre": nombre, "descripcion": descripcion, "lat": lat, "lng": lng}, None
 
 
+def validar_etiquetas(valor):
+    if valor is None:
+        return [], None
+    if not isinstance(valor, list) or not all(isinstance(e, str) for e in valor):
+        return None, "Las etiquetas no son válidas."
+
+    etiquetas = []
+    conteo_categoria = {}
+    for e in valor:
+        if e not in ETIQUETAS_VALIDAS:
+            return None, "Las etiquetas no son válidas."
+        if e in etiquetas:
+            continue
+        categoria = CATEGORIA_DE_ETIQUETA[e]
+        if categoria in CATEGORIAS_ETIQUETAS_EXCLUSIVAS:
+            conteo_categoria[categoria] = conteo_categoria.get(categoria, 0) + 1
+            if conteo_categoria[categoria] > 1:
+                return None, "Solo puede haber una etiqueta de ubicación y una de precio."
+        etiquetas.append(e)
+    return etiquetas, None
+
+
 @app.before_request
 def bloquear_plantillas():
     # La carpeta templates/ solo debe servirse ya renderizada (ver index()).
@@ -186,7 +221,7 @@ def listar_banos():
     # sin control (con las ~300 filas actuales no cambia nada).
     with conectar() as con, con.cursor() as cur:
         cur.execute(
-            """SELECT id, nombre, descripcion, lat, lng, creado_por, icono FROM banos
+            """SELECT id, nombre, descripcion, lat, lng, creado_por, icono, etiquetas FROM banos
                WHERE oculto = false ORDER BY id LIMIT 5000"""
         )
         filas = cur.fetchall()
@@ -200,6 +235,7 @@ def listar_banos():
                 "lng": f["lng"],
                 "icono": f["icono"],
                 "tipoIcono": calcular_tipo_icono(f["icono"], f["descripcion"], f["creado_por"]),
+                "etiquetas": f["etiquetas"],
             }
             for f in filas
         ]
@@ -214,15 +250,19 @@ def crear_bano():
     if error:
         return jsonify({"error": error}), 400
 
+    etiquetas, error = validar_etiquetas(cuerpo.get("etiquetas"))
+    if error:
+        return jsonify({"error": error}), 400
+
     if not turnstile.token_valido(cuerpo.get("turnstile_token"), request.remote_addr):
         return jsonify({"error": MENSAJE_ROBOT}), 400
 
     with conectar() as con, con.cursor() as cur:
         cur.execute(
-            """INSERT INTO banos (nombre, descripcion, lat, lng, creado_por)
-               VALUES (%(nombre)s, %(descripcion)s, %(lat)s, %(lng)s, %(creado_por)s)
+            """INSERT INTO banos (nombre, descripcion, lat, lng, creado_por, etiquetas)
+               VALUES (%(nombre)s, %(descripcion)s, %(lat)s, %(lng)s, %(creado_por)s, %(etiquetas)s)
                RETURNING id""",
-            {**datos, "creado_por": g.visitante_id},
+            {**datos, "creado_por": g.visitante_id, "etiquetas": etiquetas},
         )
         nuevo_id = cur.fetchone()["id"]
         con.commit()
@@ -231,6 +271,7 @@ def crear_bano():
             "id": nuevo_id,
             "icono": None,
             "tipoIcono": calcular_tipo_icono(None, datos["descripcion"], g.visitante_id),
+            "etiquetas": etiquetas,
         }
     )
 
@@ -268,6 +309,7 @@ def detalle_bano(bano_id):
             "lng": bano["lng"],
             "icono": bano["icono"],
             "tipoIcono": calcular_tipo_icono(bano["icono"], bano["descripcion"], bano["creado_por"]),
+            "etiquetas": bano["etiquetas"],
             "promedio": (sum(estrellas) / total) if total else 0,
             "totalValoraciones": total,
             "miValoracion": mia["estrellas"] if mia else 0,
@@ -294,6 +336,10 @@ def editar_bano(bano_id):
     if error:
         return jsonify({"error": error}), 400
 
+    etiquetas, error = validar_etiquetas(cuerpo.get("etiquetas"))
+    if error:
+        return jsonify({"error": error}), 400
+
     icono = cuerpo.get("icono") or None
     if icono is not None and icono not in TIPOS_ICONO:
         return jsonify({"error": "El icono no es válido."}), 400
@@ -301,9 +347,9 @@ def editar_bano(bano_id):
     with conectar() as con, con.cursor() as cur:
         cur.execute(
             """UPDATE banos SET nombre=%(nombre)s, descripcion=%(descripcion)s,
-               lat=%(lat)s, lng=%(lng)s, icono=%(icono)s WHERE id=%(id)s
+               lat=%(lat)s, lng=%(lng)s, icono=%(icono)s, etiquetas=%(etiquetas)s WHERE id=%(id)s
                RETURNING creado_por""",
-            {**datos, "icono": icono, "id": bano_id},
+            {**datos, "icono": icono, "etiquetas": etiquetas, "id": bano_id},
         )
         fila = cur.fetchone()
         con.commit()
@@ -312,6 +358,7 @@ def editar_bano(bano_id):
             "ok": True,
             "icono": icono,
             "tipoIcono": calcular_tipo_icono(icono, datos["descripcion"], fila["creado_por"]),
+            "etiquetas": etiquetas,
         }
     )
 

@@ -94,6 +94,28 @@
           ></textarea>
         </label>
 
+        <div class="campo-etiquetas">
+          <span class="etiqueta-grupo-titulo">Ubicación</span>
+          <div class="etiquetas-grupo" data-exclusivo="true">
+            <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="a_pie_de_calle">A pie de calle</button>
+            <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="en_parque">En un parque</button>
+            <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="en_centro_comercial">En un centro comercial</button>
+          </div>
+
+          <span class="etiqueta-grupo-titulo">Precio</span>
+          <div class="etiquetas-grupo" data-exclusivo="true">
+            <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="gratis">Gratis</button>
+            <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="de_pago">De pago</button>
+            <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="precio_desconocido">Precio desconocido</button>
+          </div>
+
+          <span class="etiqueta-grupo-titulo">Comodidades</span>
+          <div class="etiquetas-grupo">
+            <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="cambiador_bebes">Cambiador de bebés</button>
+            <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="accesible_silla_ruedas">Accesible en silla de ruedas</button>
+          </div>
+        </div>
+
         {% if es_moderador %}
         <div id="campo-icono-moderador" class="campo-icono-moderador" hidden>
           <label>
@@ -127,6 +149,7 @@
 
       <h2 id="detalle-nombre"></h2>
       <p id="detalle-descripcion"></p>
+      <div id="detalle-etiquetas" class="lista-etiquetas-detalle" hidden></div>
 
       <div class="detalle-acciones">
         <button type="button" id="detalle-btn-llegar" class="btn-primario">
@@ -190,6 +213,41 @@
           <img src="icons/marcador-wc-pago.svg" class="leyenda-icono" alt="" />
           <span>Baño de pago</span>
         </div>
+      </div>
+    </div>
+
+    <div id="hoja-filtro" class="hoja" hidden>
+      <button type="button" id="btn-cerrar-filtro" class="btn-cerrar" aria-label="Cerrar">
+        <img src="icons/cruz.svg" class="icono-cerrar" alt="" />
+      </button>
+
+      <h2>Filtrar baños</h2>
+      <p class="filtro-ayuda">Se mostrarán solo los baños que tengan todas las etiquetas marcadas.</p>
+
+      <div class="campo-etiquetas">
+        <span class="etiqueta-grupo-titulo">Ubicación</span>
+        <div class="etiquetas-grupo" data-exclusivo="true">
+          <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="a_pie_de_calle">A pie de calle</button>
+          <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="en_parque">En un parque</button>
+          <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="en_centro_comercial">En un centro comercial</button>
+        </div>
+
+        <span class="etiqueta-grupo-titulo">Precio</span>
+        <div class="etiquetas-grupo" data-exclusivo="true">
+          <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="gratis">Gratis</button>
+          <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="de_pago">De pago</button>
+          <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="precio_desconocido">Precio desconocido</button>
+        </div>
+
+        <span class="etiqueta-grupo-titulo">Comodidades</span>
+        <div class="etiquetas-grupo">
+          <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="cambiador_bebes">Cambiador de bebés</button>
+          <button type="button" class="btn-secundario etiqueta-boton" data-etiqueta="accesible_silla_ruedas">Accesible en silla de ruedas</button>
+        </div>
+      </div>
+
+      <div class="hoja-acciones">
+        <button type="button" id="btn-limpiar-filtro" class="btn-secundario">Quitar filtros</button>
       </div>
     </div>
 

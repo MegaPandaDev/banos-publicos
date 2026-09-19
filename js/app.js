@@ -553,7 +553,7 @@ const BotonFiltro = L.Control.extend({
     btn.type = "button";
     btn.title = "Filtrar por etiquetas";
     btn.setAttribute("aria-label", btn.title);
-    btn.innerHTML = '<span aria-hidden="true">🏷️</span>';
+    btn.innerHTML = '<img src="icons/lupa.svg" class="icono-control-mapa icono-lupa" alt="" />';
     contadorFiltro = document.createElement("span");
     contadorFiltro.className = "contador-moderacion";
     contadorFiltro.hidden = true;

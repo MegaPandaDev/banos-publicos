@@ -137,7 +137,8 @@ textarea {
    tonos (marino + blanco), invertirlo lo deja claro sobre fondo oscuro sin
    afectar a los iconos de color (café, ubicación, etc.), que no llevan este filtro. */
 @media (prefers-color-scheme: dark) {
-  .icono-cerrar {
+  .icono-cerrar,
+  .icono-lupa {
     filter: invert(1);
   }
 }
@@ -558,6 +559,10 @@ textarea {
   font-weight: 700;
 }
 
+.contador-moderacion[hidden] {
+  display: none;
+}
+
 /* Panel de moderación */
 .lista-moderacion {
   max-height: 30vh;
@@ -837,7 +842,6 @@ textarea {
 .boton-filtro {
   position: relative;
   margin-top: 6px;
-  font-size: 1.1rem;
 }
 
 .boton-filtro .contador-moderacion {

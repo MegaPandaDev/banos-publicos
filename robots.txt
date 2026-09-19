@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://banos-publicos.onrender.com/sitemap.xml
+Sitemap: https://semeaqui.onrender.com/sitemap.xml

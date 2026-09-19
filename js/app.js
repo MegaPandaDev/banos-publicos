@@ -116,6 +116,25 @@ async function obtenerTokenHumano() {
   });
 }
 
+// Si el servidor tiene Turnstile configurado (turnstileSiteKey no es null) pero
+// no conseguimos un token, casi siempre es porque algo en el navegador ha
+// impedido cargar el challenge de Cloudflare (Brave con los escudos activados,
+// un bloqueador de anuncios/privacidad, red corporativa, etc.), no porque el
+// usuario sea un bot. En ese caso avisamos con un mensaje que se puede
+// solucionar, en vez de dejar que el servidor responda con el genérico
+// "no eres un robot" (que no dice qué hacer y "recargar" no arregla nada).
+async function obtenerTokenHumanoOAvisar() {
+  const token = await obtenerTokenHumano();
+  if (!token && turnstileSiteKey) {
+    throw new Error(
+      "No se ha podido cargar la verificación de seguridad (Cloudflare). Si usas Brave, " +
+        "desactiva los escudos para este sitio; si usas un bloqueador de anuncios o una " +
+        "extensión de privacidad, permite challenges.cloudflare.com y vuelve a intentarlo."
+    );
+  }
+  return token;
+}
+
 // --- Mapa ---
 export const map = L.map("map", { zoomControl: false }).setView(CENTRO_POR_DEFECTO, ZOOM_POR_DEFECTO);
 
@@ -808,7 +827,7 @@ formComentario.addEventListener("submit", async (e) => {
   const btnEnviar = formComentario.querySelector("button[type=submit]");
   btnEnviar.disabled = true;
   try {
-    const turnstile_token = await obtenerTokenHumano();
+    const turnstile_token = await obtenerTokenHumanoOAvisar();
     await peticionJSON(`/api/banos/${idDetalleActual}/comentarios`, {
       method: "POST",
       body: JSON.stringify({ texto, turnstile_token }),
@@ -905,7 +924,7 @@ async function reportarLavabo(id) {
 
   detalleBtnReportar.disabled = true;
   try {
-    const turnstile_token = await obtenerTokenHumano();
+    const turnstile_token = await obtenerTokenHumanoOAvisar();
     await peticionJSON(`/api/banos/${id}/reportar`, {
       method: "POST",
       body: JSON.stringify({ ...resultado, turnstile_token }),
@@ -1115,7 +1134,7 @@ formLavabo.addEventListener("submit", async (e) => {
       if (idDetalleActual === String(modoEdicionId)) renderizarEtiquetasDetalle(resultado.etiquetas);
       mostrarToast("Baño actualizado.", "success");
     } else {
-      const turnstile_token = await obtenerTokenHumano();
+      const turnstile_token = await obtenerTokenHumanoOAvisar();
       const resultado = await peticionJSON("/api/banos", {
         method: "POST",
         body: JSON.stringify({ nombre, descripcion, lat, lng, etiquetas, turnstile_token }),

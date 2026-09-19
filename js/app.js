@@ -1162,7 +1162,11 @@ formLavabo.addEventListener("submit", async (e) => {
 
 // --- Aviso / toast / confirmación ---
 let toastTimeout;
-export function mostrarToast(mensaje, tipo = "info", duracion = 4000) {
+// La duración por defecto escala con la longitud del mensaje (mínimo 4s):
+// los avisos cortos de siempre no cambian, pero uno largo como el de
+// Turnstile bloqueado (~240 caracteres) se queda visible el tiempo de
+// leerlo en vez de desaparecer a los 4 segundos.
+export function mostrarToast(mensaje, tipo = "info", duracion = Math.max(4000, mensaje.length * 60)) {
   const toast = document.getElementById("toast");
   toast.textContent = mensaje;
   toast.className = `toast toast-${tipo} visible`;

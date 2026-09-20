@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://semeaqui.onrender.com/sitemap.xml
+Sitemap: https://wcoasis.com/sitemap.xml

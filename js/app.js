@@ -883,6 +883,7 @@ function elegirMotivoReporte() {
       desactivarAccesibilidadDetalle();
       desactivarAccesibilidadDetalle = null;
     }
+    actualizarBarraAnuncio();
     hojaMotivoReporte.hidden = false;
     motivoComentario.value = "";
     btnEnviarMotivo.disabled = true;
@@ -895,6 +896,7 @@ function elegirMotivoReporte() {
       desactivarAccesibilidadMotivo();
       hojaDetalle.hidden = false;
       desactivarAccesibilidadDetalle = activarAccesibilidadHoja(hojaDetalle, cerrarDetalle);
+      actualizarBarraAnuncio();
       botones.forEach((b) => b.removeEventListener("click", onClickMotivo));
       btnEnviarMotivo.removeEventListener("click", onEnviar);
       btnCancelarMotivo.removeEventListener("click", onCancelar);

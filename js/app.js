@@ -457,6 +457,7 @@ export async function abrirDetalle(id) {
   if (!yaEstabaAbierta) {
     desactivarAccesibilidadDetalle = activarAccesibilidadHoja(hojaDetalle, cerrarDetalle);
   }
+  actualizarBarraAnuncio();
   await cargarDetalle(id);
 }
 
@@ -467,6 +468,7 @@ export function cerrarDetalle() {
     desactivarAccesibilidadDetalle();
     desactivarAccesibilidadDetalle = null;
   }
+  actualizarBarraAnuncio();
 }
 
 btnCerrarDetalle.addEventListener("click", cerrarDetalle);
@@ -483,6 +485,7 @@ export function cerrarInfo() {
     desactivarAccesibilidadInfo();
     desactivarAccesibilidadInfo = null;
   }
+  actualizarBarraAnuncio();
 }
 
 btnCerrarInfo.addEventListener("click", cerrarInfo);
@@ -494,6 +497,7 @@ function abrirInfo() {
   if (alAbrirDetalleOFormulario) alAbrirDetalleOFormulario();
   hojaInfo.hidden = false;
   desactivarAccesibilidadInfo = activarAccesibilidadHoja(hojaInfo, cerrarInfo);
+  actualizarBarraAnuncio();
 }
 
 const BotonInfo = L.Control.extend({
@@ -1252,9 +1256,18 @@ document.addEventListener(
 
 // --- Cookies / anuncios ---
 // De momento AD_SENSE_CLIENTE es null (aún no hay cuenta de AdSense aprobada), así que
-// esta sección no hace nada visible: no se muestra el aviso de cookies ni el hueco de
-// anuncio hasta que se rellene con el ID real (ca-pub-XXXXXXXXXXXXXXXX) y se complete
-// cargarAnuncio() con el bloque de anuncio correspondiente.
+// esta sección no hace nada visible hasta que se rellene con el ID real
+// (ca-pub-XXXXXXXXXXXXXXXX) y se complete cargarAnuncioEnBarra()/cargarAnuncioEnContenido()
+// con el bloque de anuncio correspondiente.
+//
+// Hay dos huecos de anuncio, con reglas distintas para no repetir el motivo de rechazo de
+// AdSense ("anuncios en pantallas sin contenido de editor"):
+//  - la barra fija de abajo (#espacio-anuncio) solo se muestra mientras hay una hoja con
+//    contenido real abierta (la ficha de un baño o "Sobre Meaquí"); se oculta en cuanto se
+//    cierran, así nunca queda flotando sobre el mapa desnudo.
+//  - el anuncio en medio del texto "¿Por qué he creado esta app?" (#anuncio-contenido) se
+//    activa una sola vez, al dar el consentimiento, porque ahí el contenido de alrededor es
+//    siempre el mismo.
 const AD_SENSE_CLIENTE = null;
 const CLAVE_CONSENTIMIENTO_ANUNCIOS = "consentimiento_anuncios";
 
@@ -1262,18 +1275,40 @@ const avisoCookies = document.getElementById("aviso-cookies");
 const btnAceptarCookies = document.getElementById("btn-aceptar-cookies");
 const btnRechazarCookies = document.getElementById("btn-rechazar-cookies");
 const espacioAnuncio = document.getElementById("espacio-anuncio");
+const anuncioContenido = document.getElementById("anuncio-contenido");
 
-function cargarAnuncio() {
+let anunciosPermitidos = false;
+let barraAnuncioCargada = false;
+
+function cargarAnuncioEnContenido() {
   if (!AD_SENSE_CLIENTE) return;
-  espacioAnuncio.hidden = false;
-  document.body.classList.add("con-anuncio");
-  // TODO: insertar aquí el <ins class="adsbygoogle"> con el bloque de anuncio.
+  anuncioContenido.hidden = false;
+  // TODO: insertar aquí el <ins class="adsbygoogle"> del anuncio en el texto.
+}
+
+// Se llama cada vez que se abre o se cierra la ficha de un baño o "Sobre Meaquí", para que
+// la barra aparezca y desaparezca con ellas en vez de quedarse fija todo el rato.
+function actualizarBarraAnuncio() {
+  if (!AD_SENSE_CLIENTE || !anunciosPermitidos) return;
+  const hayContenidoAbierto = !hojaDetalle.hidden || !hojaInfo.hidden;
+  espacioAnuncio.hidden = !hayContenidoAbierto;
+  document.body.classList.toggle("con-anuncio", hayContenidoAbierto);
+  if (hayContenidoAbierto && !barraAnuncioCargada) {
+    barraAnuncioCargada = true;
+    // TODO: insertar aquí el <ins class="adsbygoogle"> de la barra.
+  }
+}
+
+function activarAnuncios() {
+  anunciosPermitidos = true;
+  cargarAnuncioEnContenido();
+  actualizarBarraAnuncio();
 }
 
 if (AD_SENSE_CLIENTE) {
   const consentimiento = localStorage.getItem(CLAVE_CONSENTIMIENTO_ANUNCIOS);
   if (consentimiento === "aceptado") {
-    cargarAnuncio();
+    activarAnuncios();
   } else if (consentimiento !== "rechazado") {
     avisoCookies.hidden = false;
   }
@@ -1282,7 +1317,7 @@ if (AD_SENSE_CLIENTE) {
 btnAceptarCookies.addEventListener("click", () => {
   localStorage.setItem(CLAVE_CONSENTIMIENTO_ANUNCIOS, "aceptado");
   avisoCookies.hidden = true;
-  cargarAnuncio();
+  activarAnuncios();
 });
 
 btnRechazarCookies.addEventListener("click", () => {

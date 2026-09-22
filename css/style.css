@@ -99,6 +99,24 @@ body {
   color: var(--color-texto);
 }
 
+.anuncio-contenido {
+  margin: 1.5rem 0;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-superficie-sutil);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-m);
+  color: var(--color-texto-tenue);
+  font-size: 0.75rem;
+  overflow: hidden;
+}
+
+.anuncio-contenido[hidden] {
+  display: none;
+}
+
 input,
 textarea {
   background: var(--color-superficie);

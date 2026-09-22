@@ -55,18 +55,48 @@
 
 html,
 body {
-  height: 100%;
   margin: 0;
   font-family: var(--fuente-cuerpo);
   color: var(--color-texto);
   background: var(--color-fondo);
 }
 
-body {
+/* La app en sí (cabecera, mapa, pie y todas las hojas/overlays) ocupa
+   exactamente una pantalla y no hace scroll, como una app nativa. El
+   contenido editorial de debajo (ver .contenido-editorial) es una sección
+   normal de la página, a la que se llega haciendo scroll hacia abajo. */
+#app-shell {
   display: flex;
   flex-direction: column;
   height: 100dvh;
   overflow: hidden;
+}
+
+.contenido-editorial {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem calc(3rem + env(safe-area-inset-bottom, 0));
+}
+
+.contenido-editorial h2 {
+  font-family: var(--fuente-display);
+  font-size: 1.4rem;
+  margin: 0 0 1rem;
+}
+
+.contenido-editorial p {
+  line-height: 1.6;
+  color: var(--color-texto-suave);
+  margin: 0 0 1rem;
+}
+
+.contenido-editorial a {
+  color: var(--color-primario-oscuro);
+}
+
+.contenido-editorial p.contenido-editorial-firma {
+  font-family: var(--fuente-display);
+  color: var(--color-texto);
 }
 
 input,

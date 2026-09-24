@@ -46,6 +46,13 @@ CREATE TABLE IF NOT EXISTS comentarios (
     creado_por TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS push_tokens (
+    visitante_id TEXT PRIMARY KEY,
+    token TEXT NOT NULL,
+    plataforma TEXT NOT NULL DEFAULT 'android',
+    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_banos_oculto ON banos(oculto);
 CREATE INDEX IF NOT EXISTS idx_comentarios_bano ON comentarios(bano_id);
 CREATE INDEX IF NOT EXISTS idx_valoraciones_bano ON valoraciones(bano_id);

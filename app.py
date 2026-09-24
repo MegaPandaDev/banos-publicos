@@ -14,6 +14,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import psycopg
 from psycopg.rows import dict_row
 
+import push
 import turnstile
 
 DATABASE_URL = os.environ["DATABASE_URL"]
@@ -212,6 +213,35 @@ def api_yo():
     return jsonify({"esModerador": es_moderador(g.visitante_id)})
 
 
+PLATAFORMAS_PUSH = {"android", "ios"}
+
+
+@app.route("/api/push/registrar", methods=["POST"])
+@limiter.limit("10 per hour")
+def registrar_push():
+    # Llamado desde la app nativa (Capacitor) tras conseguir el token de FCM/
+    # APNs del dispositivo. Un token por visitante_id: si ya había uno (mismo
+    # dispositivo, token renovado), se sustituye.
+    cuerpo = request.get_json(force=True, silent=True) or {}
+    token = str(cuerpo.get("token") or "").strip()
+    plataforma = cuerpo.get("plataforma")
+    if not token or len(token) > 500:
+        return jsonify({"error": "Token no válido."}), 400
+    if plataforma not in PLATAFORMAS_PUSH:
+        plataforma = "android"
+
+    with conectar() as con, con.cursor() as cur:
+        cur.execute(
+            """INSERT INTO push_tokens (visitante_id, token, plataforma, actualizado_en)
+               VALUES (%s, %s, %s, now())
+               ON CONFLICT (visitante_id) DO UPDATE
+                 SET token = EXCLUDED.token, plataforma = EXCLUDED.plataforma, actualizado_en = now()""",
+            (g.visitante_id, token, plataforma),
+        )
+        con.commit()
+    return jsonify({"ok": True})
+
+
 # --- Baños ---
 @app.route("/api/banos", methods=["GET"])
 def listar_banos():
@@ -407,6 +437,44 @@ def reportar(bano_id):
         )
         con.commit()
     return jsonify({"ok": True})
+
+
+@app.route("/api/banos/<int:bano_id>/resolver-reportes", methods=["POST"])
+def resolver_reportes(bano_id):
+    if not es_moderador(g.visitante_id):
+        return jsonify({"error": "No autorizado."}), 403
+
+    with conectar() as con, con.cursor() as cur:
+        cur.execute("SELECT nombre FROM banos WHERE id = %s", (bano_id,))
+        bano = cur.fetchone()
+        if not bano:
+            return jsonify({"error": "Este baño ya no existe."}), 404
+
+        cur.execute("SELECT DISTINCT visitante_id FROM reportes WHERE bano_id = %s", (bano_id,))
+        reporteros = [f["visitante_id"] for f in cur.fetchall()]
+
+        destinatarios = []
+        if reporteros:
+            cur.execute(
+                "SELECT token FROM push_tokens WHERE visitante_id = ANY(%s)",
+                (reporteros,),
+            )
+            destinatarios = [f["token"] for f in cur.fetchall()]
+
+        cur.execute("DELETE FROM reportes WHERE bano_id = %s", (bano_id,))
+        cur.execute("UPDATE banos SET reportes = 0, oculto = false WHERE id = %s", (bano_id,))
+        con.commit()
+
+    notificados = 0
+    for token in destinatarios:
+        if push.enviar(
+            token,
+            titulo="Tu reporte se ha resuelto",
+            cuerpo=f'Hemos revisado tu reporte sobre "{bano["nombre"]}". ¡Gracias por avisar!',
+        ):
+            notificados += 1
+
+    return jsonify({"ok": True, "notificados": notificados})
 
 
 @app.route("/api/moderacion")

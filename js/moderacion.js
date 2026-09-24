@@ -135,6 +135,22 @@ async function eliminarDesdeModeracion(id, nombre) {
   }
 }
 
+async function resolverDesdeModeracion(id) {
+  try {
+    const resultado = await peticionJSON(`/api/banos/${id}/resolver-reportes`, { method: "POST" });
+    mostrarToast(
+      resultado.notificados > 0
+        ? `Reportes resueltos. Avisado${resultado.notificados === 1 ? "" : "s"} ${resultado.notificados} usuario${resultado.notificados === 1 ? "" : "s"}.`
+        : "Reportes resueltos.",
+      "success"
+    );
+    await recargarModeracion();
+  } catch (err) {
+    console.error(err);
+    mostrarToast(err.message || "No se pudieron resolver los reportes.", "error");
+  }
+}
+
 function renderizarModeracion(datos) {
   contadorModeracion.textContent = String(datos.reportados.length);
   contadorModeracion.hidden = datos.reportados.length === 0;
@@ -156,6 +172,7 @@ function renderizarModeracion(datos) {
           ${detalle ? `<span>${detalle}</span>` : ""}
         </button>
         <div class="item-reportado-acciones">
+          <button type="button" class="btn-resolver-moderacion" data-id="${b.id}">Resolver</button>
           <button type="button" class="btn-editar-moderacion" data-id="${b.id}">Editar</button>
           <button type="button" class="btn-eliminar-moderacion" data-id="${b.id}" data-nombre="${escaparHTML(b.nombre)}">Eliminar</button>
         </div>
@@ -182,6 +199,9 @@ function renderizarModeracion(datos) {
     el.addEventListener("click", () =>
       irAModeracionItem(el.dataset.id, parseFloat(el.dataset.lat), parseFloat(el.dataset.lng))
     );
+  });
+  listaModeracionReportados.querySelectorAll(".btn-resolver-moderacion").forEach((btn) => {
+    btn.addEventListener("click", () => resolverDesdeModeracion(btn.dataset.id));
   });
   listaModeracionReportados.querySelectorAll(".btn-editar-moderacion").forEach((btn) => {
     btn.addEventListener("click", () => abrirFormularioEdicion(String(btn.dataset.id)));

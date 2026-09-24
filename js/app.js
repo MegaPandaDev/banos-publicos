@@ -1352,3 +1352,30 @@ if ("serviceWorker" in navigator) {
       .catch((err) => console.warn("SW no registrado:", err));
   });
 }
+
+// --- Notificaciones push (solo dentro de la app nativa) ---
+// Capacitor inyecta window.Capacitor en el WebView de la app de Android/iOS;
+// en un navegador normal (la PWA de siempre) no existe, así que todo este
+// bloque no hace nada ahí y el flujo web sigue exactamente igual que antes.
+// El plugin se usa sin bundler, tal y como lo expone Capacitor de forma
+// global en window.Capacitor.Plugins.
+if (window.Capacitor?.isNativePlatform?.()) {
+  const { PushNotifications } = window.Capacitor.Plugins;
+
+  PushNotifications.addListener("registration", (token) => {
+    peticionJSON("/api/push/registrar", {
+      method: "POST",
+      body: JSON.stringify({ token: token.value, plataforma: window.Capacitor.getPlatform() }),
+    }).catch((err) => console.error("No se pudo registrar el token de notificaciones:", err));
+  });
+
+  PushNotifications.addListener("registrationError", (err) => {
+    console.error("Error al registrar notificaciones push:", err);
+  });
+
+  PushNotifications.requestPermissions().then((resultado) => {
+    if (resultado.receive === "granted") {
+      PushNotifications.register();
+    }
+  });
+}

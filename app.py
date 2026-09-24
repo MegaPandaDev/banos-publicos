@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from flask import Flask, Response, g, jsonify, render_template, request
+from flask import Flask, Response, abort, g, jsonify, render_template, request, send_from_directory
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -46,7 +46,13 @@ IDS_SISTEMA_HISTORICOS = {
     "xL75ooYx35a0RPoipF0GXBqIQWC2",
 }
 
-app = Flask(__name__, static_folder=".", static_url_path="")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# static_folder=None desactiva la ruta estática automática de Flask (que serviría
+# CUALQUIER archivo bajo la raíz del proyecto sin restricción alguna, ignorando
+# por completo la lista blanca de abajo). Los estáticos se sirven a mano en la
+# vista "estaticos" de más abajo.
+app = Flask(__name__, static_folder=None)
 
 # Render (como la mayoría de PaaS) pone la app detrás de un proxy inverso:
 # sin esto, request.remote_addr sería siempre la IP interna del proxy (igual
@@ -160,16 +166,6 @@ def validar_etiquetas(valor):
                 return None, "Solo puede haber una etiqueta de ubicación y una de precio."
         etiquetas.append(e)
     return etiquetas, None
-
-
-@app.before_request
-def bloquear_plantillas():
-    # La carpeta templates/ solo debe servirse ya renderizada (ver index()).
-    # Como static_folder cubre toda la raíz del proyecto, Flask registra su
-    # propia ruta estática que serviría estos archivos tal cual si no se
-    # bloquean aquí, antes de que se decida ninguna otra ruta.
-    if request.path == "/templates" or request.path.startswith("/templates/"):
-        return jsonify({"error": "No encontrado."}), 404
 
 
 @app.before_request
@@ -604,6 +600,21 @@ def borrar_comentario(bano_id, comentario_id):
 
 
 # --- Estáticos (la web en sí) ---
+# Esta ruta sirve archivos directamente desde la raíz del proyecto (ahí viven
+# css/, js/, icons/, manifest.json...), así que sin esta lista blanca
+# cualquiera podría pedir /app.py, /.env, /schema.sql o incluso /.git/HEAD y
+# se serviría tal cual. Solo se permite lo que la propia web carga en el navegador.
+ARCHIVOS_ESTATICOS_PERMITIDOS = {
+    "manifest.json",
+    "sw.js",
+    "privacidad.html",
+    "robots.txt",
+    "sitemap.xml",
+    "ads.txt",
+}
+PREFIJOS_ESTATICOS_PERMITIDOS = ("css/", "js/", "icons/")
+
+
 @app.route("/")
 def index():
     return render_template("index.html", es_moderador=es_moderador(g.visitante_id))
@@ -611,7 +622,10 @@ def index():
 
 @app.route("/<path:ruta>")
 def estaticos(ruta):
-    return app.send_static_file(ruta)
+    permitido = ruta in ARCHIVOS_ESTATICOS_PERMITIDOS or ruta.startswith(PREFIJOS_ESTATICOS_PERMITIDOS)
+    if not permitido:
+        abort(404)
+    return send_from_directory(BASE_DIR, ruta)
 
 
 if __name__ == "__main__":

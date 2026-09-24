@@ -3,3 +3,7 @@ Thumbs.db
 .env
 __pycache__/
 *.pyc
+
+
+# App nativa (Capacitor)
+node_modules/

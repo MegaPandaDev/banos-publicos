@@ -1,0 +1,18 @@
+{
+  "name": "meaqui-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Envoltorio nativo (Capacitor) de Meaquí para Android e iOS",
+  "scripts": {
+    "cap:sync": "cap sync",
+    "cap:android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/push-notifications": "^8.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2"
+  }
+}

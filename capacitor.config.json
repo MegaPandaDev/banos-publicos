@@ -1,0 +1,12 @@
+{
+  "appId": "com.megapandadev.meaqui",
+  "appName": "Meaquí",
+  "webDir": "www",
+  "server": {
+    "url": "https://semeaqui.onrender.com",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

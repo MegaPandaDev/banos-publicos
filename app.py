@@ -98,6 +98,7 @@ def añadir_cabeceras_seguridad(resp):
     resp.headers["Content-Security-Policy"] = CSP
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return resp
 
 
@@ -106,7 +107,10 @@ def conectar():
 
 
 def es_moderador(visitante_id: str) -> bool:
-    return bool(MODERADOR_ID) and visitante_id == MODERADOR_ID
+    # compare_digest en vez de == para no dar pistas de MODERADOR_ID por
+    # temporización, aunque con un token de 24 bytes al azar el riesgo real es
+    # prácticamente nulo: es más una buena práctica barata que una necesidad.
+    return bool(MODERADOR_ID) and secrets.compare_digest(visitante_id, MODERADOR_ID)
 
 
 def es_sistema(creado_por: str) -> bool:
@@ -489,6 +493,17 @@ def exportar_moderacion():
             for fila in cur.fetchall():
                 reportes_por_bano.setdefault(fila["bano_id"], []).append(fila)
 
+    def celda_segura(valor):
+        # Si el nombre, la descripción o un comentario de reporte empieza por
+        # =, +, - o @, Excel/Sheets pueden interpretarlo como una fórmula al
+        # abrir el CSV ("inyección de fórmulas"). Como estos campos los
+        # escribe cualquier visitante sin moderar, se antepone una comilla
+        # para que se traten siempre como texto plano.
+        texto = str(valor)
+        if texto[:1] in ("=", "+", "-", "@"):
+            return "'" + texto
+        return texto
+
     salida = io.StringIO()
     escritor = csv.writer(salida)
     escritor.writerow(
@@ -502,14 +517,14 @@ def exportar_moderacion():
         escritor.writerow(
             [
                 b["id"],
-                b["nombre"],
-                b["descripcion"],
+                celda_segura(b["nombre"]),
+                celda_segura(b["descripcion"]),
                 b["lat"],
                 b["lng"],
                 b["reportes"],
                 b["oculto"],
                 b["creado_en"].isoformat(),
-                detalle,
+                celda_segura(detalle),
             ]
         )
 
@@ -567,6 +582,9 @@ def editar_comentario(bano_id, comentario_id):
     texto = str(cuerpo.get("texto") or "").strip()
     if not texto or len(texto) > 400:
         return jsonify({"error": "El comentario no es válido."}), 400
+
+    if not turnstile.token_valido(cuerpo.get("turnstile_token"), request.remote_addr):
+        return jsonify({"error": MENSAJE_ROBOT}), 400
 
     with conectar() as con, con.cursor() as cur:
         cur.execute(

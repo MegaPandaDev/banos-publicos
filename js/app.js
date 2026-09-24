@@ -797,9 +797,10 @@ async function guardarEdicionComentario(idBano, idComentario, btnGuardar) {
 
   btnGuardar.disabled = true;
   try {
+    const turnstile_token = await obtenerTokenHumanoOAvisar();
     await peticionJSON(`/api/banos/${idBano}/comentarios/${idComentario}`, {
       method: "PUT",
-      body: JSON.stringify({ texto: nuevoTexto }),
+      body: JSON.stringify({ texto: nuevoTexto, turnstile_token }),
     });
     await cargarDetalle(idBano);
   } catch (err) {

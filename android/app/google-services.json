@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "721260174824",
+    "project_id": "meaqui-23f58",
+    "storage_bucket": "meaqui-23f58.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:721260174824:android:3c4ecac6594b74b119185d",
+        "android_client_info": {
+          "package_name": "com.megapandadev.meaqui"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAAB8zX2_5IGw2GJmV3zb6SVvni-TlHNKA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
